@@ -5,7 +5,7 @@ import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/core/utils/smooth_page_route.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
-import 'package:flutter_catat_stok/screens/dashboard_screen.dart';
+import 'package:flutter_catat_stok/screens/main_navigation_screen.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 
@@ -128,6 +128,7 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
               ),
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'manage_category_fab',
         onPressed: () => _showAddEditCategoryModal(categories: []),
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add_rounded, color: Colors.white),
@@ -254,6 +255,18 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                                 size: 20,
                               ),
                               onPressed: () {
+                                if (cat.productCount > 0) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Kategori ini masih memiliki produk. Hapus produk terlebih dahulu sebelum menghapus kategori.',
+                                      ),
+                                      backgroundColor: AppColors.warning,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                
                                 _productProvider.deleteCategory(cat.id);
                               },
                             ),
@@ -268,19 +281,36 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
               if (widget.type == PickCategoryType.initial) ...[
                 const SizedBox(height: 20),
                 Center(
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.of(context).pushReplacement(
-                        SmoothPageRoute(page: DashboardScreen()),
+                  child: Consumer<ProductProvider>(
+                    builder: (context, provider, _) {
+                      return ElevatedButton(
+                        onPressed: () {
+                          if (provider.categories.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Buat setidaknya 1 kategori terlebih dahulu.',
+                                ),
+                                backgroundColor: AppColors.warning,
+                              ),
+                            );
+                            return;
+                          }
+                          Navigator.of(context).pushReplacement(
+                            SmoothPageRoute(
+                              page: const MainNavigationScreen(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          'Lanjut ke Dashboard',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       );
                     },
-                    child: const Text(
-                      'Lanjut ke Dashboard',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ),
                 ),
               ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
+import 'package:flutter_catat_stok/module/product/presentation/screens/manage_category_screen.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../models/mock_data.dart';
@@ -46,11 +47,28 @@ class _ProductListScreenState extends State<ProductListScreen> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'product_list_fab',
         onPressed: () {
-          Navigator.push(
-            context,
-            SmoothPageRoute(page: const AddEditProductScreen()),
-          );
+          final categories = context.read<ProductProvider>().categories;
+          if (categories.isEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  'Buat kategori terlebih dahulu sebelum menambah produk.',
+                ),
+                backgroundColor: AppColors.warning,
+              ),
+            );
+            Navigator.push(
+              context,
+              SmoothPageRoute(page: const ManageCategoryScreen()),
+            );
+          } else {
+            Navigator.push(
+              context,
+              SmoothPageRoute(page: const AddEditProductScreen()),
+            );
+          }
         },
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add_rounded, color: Colors.white),

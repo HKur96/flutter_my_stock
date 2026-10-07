@@ -1,7 +1,10 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/core/config/enum.dart';
+import 'package:flutter_catat_stok/core/utils/smooth_page_route.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
+import 'package:flutter_catat_stok/module/product/presentation/screens/manage_category_screen.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../models/mock_data.dart';
@@ -26,7 +29,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   late TextEditingController _sellPriceController;
   late TextEditingController _descriptionController;
 
-  String _selectedCategory = 'Elektronik';
+  String? _selectedCategory;
   String _selectedUnit = 'Pcs';
   bool _isLoading = false;
 
@@ -64,6 +67,43 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     if (p != null) {
       _selectedCategory = p.category;
       _selectedUnit = p.unit;
+    }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkCategoryAndInit();
+    });
+  }
+
+  Future<void> _checkCategoryAndInit() async {
+    final provider = context.read<ProductProvider>();
+    if (provider.categories.isEmpty) {
+      await provider.getCategories();
+    }
+
+    if (!mounted) return;
+
+    if (provider.categories.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Silakan buat kategori terlebih dahulu sebelum menambah produk.',
+          ),
+          backgroundColor: AppColors.warning,
+        ),
+      );
+      Navigator.pushReplacement(
+        context,
+        SmoothPageRoute(
+          page: const ManageCategoryScreen(type: PickCategoryType.initial),
+        ),
+      );
+    } else {
+      if (_selectedCategory == null ||
+          !provider.categories.any((c) => c.name == _selectedCategory)) {
+        setState(() {
+          _selectedCategory = provider.categories.first.name;
+        });
+      }
     }
   }
 
@@ -253,30 +293,32 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               ),
                             ),
                             const SizedBox(height: 6),
-                            DropdownButtonFormField<String>(
-                              value: _selectedCategory,
-                              decoration: const InputDecoration(
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 12,
+                             DropdownButtonFormField<String>(
+                                value: (value.categories.any((c) => c.name == _selectedCategory))
+                                    ? _selectedCategory
+                                    : (value.categories.isNotEmpty ? value.categories.first.name : null),
+                                decoration: const InputDecoration(
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 12,
+                                  ),
                                 ),
-                              ),
-                              items: value.categories
-                                  .map(
-                                    (c) => DropdownMenuItem(
-                                      value: c.name,
-                                      child: Text(
-                                        c.name,
-                                        overflow: TextOverflow.ellipsis,
+                                items: value.categories
+                                    .map(
+                                      (c) => DropdownMenuItem(
+                                        value: c.name,
+                                        child: Text(
+                                          c.name,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (val) {
-                                if (val != null)
-                                  setState(() => _selectedCategory = val);
-                              },
-                            ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) {
+                                  if (val != null)
+                                    setState(() => _selectedCategory = val);
+                                },
+                              ),
                           ],
                         ),
                       ),

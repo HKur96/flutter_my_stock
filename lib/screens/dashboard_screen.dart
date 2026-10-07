@@ -152,10 +152,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: AppColors.primary,
                         bgColor: AppColors.primaryLight,
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            SmoothPageRoute(page: const AddEditProductScreen()),
-                          );
+                          final categories =
+                              context.read<ProductProvider>().categories;
+                          if (categories.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Kategori masih kosong. Buat kategori terlebih dahulu.',
+                                ),
+                                backgroundColor: AppColors.warning,
+                              ),
+                            );
+                            Navigator.push(
+                              context,
+                              SmoothPageRoute(
+                                page: const ManageCategoryScreen(),
+                              ),
+                            );
+                          } else {
+                            Navigator.push(
+                              context,
+                              SmoothPageRoute(
+                                page: const AddEditProductScreen(),
+                              ),
+                            );
+                          }
                         },
                       ),
                     ),
