@@ -1,0 +1,1 @@
+enum PickCategoryType { initial, manage }
