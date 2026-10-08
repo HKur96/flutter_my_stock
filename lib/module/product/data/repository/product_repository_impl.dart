@@ -138,7 +138,6 @@ class ProductRepositoryImpl implements ProductRepository {
           .single();
       return ProductModel.fromJson(response);
     } catch (e) {
-      print(e);
       return null;
     }
   }
@@ -173,20 +172,40 @@ class ProductRepositoryImpl implements ProductRepository {
       return (response as List)
           .map<Product>((x) => ProductModel.fromJson(x))
           .toList();
-    } catch (e, s) {
-      print('error getProducts $e\n$s');
+    } catch (e) {
       return [];
     }
   }
 
   @override
-  Future<Product?> updateProduct({
-    required String id,
-    required String name,
-    required String categoryId,
-    required int stock,
-  }) {
-    // TODO: implement updateProduct
-    throw UnimplementedError();
+  Future<Product?> updateProduct({required Product product}) async {
+    try {
+      final response = await _client
+          .from('products')
+          .update({...product.toJson()})
+          .eq('id', product.id)
+          .select('''
+              id,
+              name,
+              sku,
+              purchase_price,
+              recommended_selling_price,
+              minimum_stock,
+              current_stock,
+              is_active,
+              created_at,
+              updated_at,
+              unit,
+              description,
+              categories (
+                id, 
+                name
+              )
+      ''')
+          .single();
+      return ProductModel.fromJson(response);
+    } catch (e) {
+      return null;
+    }
   }
 }

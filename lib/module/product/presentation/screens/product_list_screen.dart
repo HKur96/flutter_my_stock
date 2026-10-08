@@ -1,12 +1,13 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
-import 'package:flutter_catat_stok/module/product/presentation/screens/manage_category_screen.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/smooth_page_route.dart';
 import 'product_detail_screen.dart';
-import 'add_edit_product_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
   const ProductListScreen({super.key});
@@ -302,7 +303,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                                               MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
-                                              'Rp ${item.recommendedSellingPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                                              CurrencyFormatter.format(
+                                                item.recommendedSellingPrice
+                                                    .toDouble(),
+                                              ),
                                               style: const TextStyle(
                                                 fontSize: 15,
                                                 fontWeight: FontWeight.bold,

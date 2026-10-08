@@ -24,7 +24,8 @@ class _StockInScreenState extends State<StockInScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedProduct = widget.initialProduct ?? context.read<ProductProvider>().products.first;
+    _selectedProduct =
+        widget.initialProduct ?? context.read<ProductProvider>().products.first;
   }
 
   void _incrementQty() {
@@ -57,7 +58,9 @@ class _StockInScreenState extends State<StockInScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Berhasil menambah $_quantity ${_selectedProduct?.unit ?? "Pcs"} stok ${_selectedProduct?.name}!'),
+        content: Text(
+          'Berhasil menambah $_quantity ${_selectedProduct?.unit ?? "Pcs"} stok ${_selectedProduct?.name}!',
+        ),
         backgroundColor: AppColors.stockIn,
       ),
     );
@@ -89,15 +92,18 @@ class _StockInScreenState extends State<StockInScreen> {
         ),
         child: ElevatedButton.icon(
           onPressed: _isLoading ? null : _handleSaveStockIn,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.stockIn,
-          ),
-          icon: _isLoading ? const SizedBox.shrink() : const Icon(Icons.check_rounded, color: Colors.white),
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.stockIn),
+          icon: _isLoading
+              ? const SizedBox.shrink()
+              : const Icon(Icons.check_rounded, color: Colors.white),
           label: _isLoading
               ? const SizedBox(
                   width: 22,
                   height: 22,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
                 )
               : const Text('Simpan Stok Masuk'),
         ),
@@ -120,7 +126,11 @@ class _StockInScreenState extends State<StockInScreen> {
                   CircleAvatar(
                     backgroundColor: AppColors.stockIn,
                     radius: 20,
-                    child: Icon(Icons.arrow_downward_rounded, color: Colors.white, size: 22),
+                    child: Icon(
+                      Icons.arrow_downward_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                   ),
                   SizedBox(width: 14),
                   Expanded(
@@ -137,7 +147,10 @@ class _StockInScreenState extends State<StockInScreen> {
                         ),
                         Text(
                           'Jumlah stok akan otomatis bertambah setelah disimpan.',
-                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -150,7 +163,11 @@ class _StockInScreenState extends State<StockInScreen> {
             // Select Product Dropdown
             const Text(
               'Pilih Produk',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             Selector<ProductProvider, List<Product>>(
@@ -160,12 +177,18 @@ class _StockInScreenState extends State<StockInScreen> {
                   value: _selectedProduct,
                   isExpanded: true,
                   decoration: const InputDecoration(
-                    prefixIcon: Icon(Icons.inventory_2_outlined, color: AppColors.textMuted),
+                    prefixIcon: Icon(
+                      Icons.inventory_2_outlined,
+                      color: AppColors.textMuted,
+                    ),
                   ),
                   items: products.map((p) {
                     return DropdownMenuItem(
                       value: p,
-                      child: Text('${p.name} (${p.sku})', overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        '${p.name} (${p.sku})',
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     );
                   }).toList(),
                   onChanged: (val) {
@@ -174,7 +197,7 @@ class _StockInScreenState extends State<StockInScreen> {
                     });
                   },
                 );
-              }
+              },
             ),
             const SizedBox(height: 16),
 
@@ -236,7 +259,11 @@ class _StockInScreenState extends State<StockInScreen> {
             // Quantity Counter Row
             const Text(
               'Jumlah Masuk',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Row(
@@ -251,16 +278,22 @@ class _StockInScreenState extends State<StockInScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: const Icon(Icons.remove_rounded, color: AppColors.textPrimary),
+                    child: const Icon(
+                      Icons.remove_rounded,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: TextField(
+                  child: TextFormField(
                     controller: _qtyController,
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                     onChanged: (val) {
                       final n = int.tryParse(val);
                       if (n != null && n > 0) {
@@ -270,6 +303,8 @@ class _StockInScreenState extends State<StockInScreen> {
                     decoration: InputDecoration(
                       suffixText: _selectedProduct?.unit ?? 'Pcs',
                     ),
+                    onTapOutside: (event) =>
+                        FocusManager.instance.primaryFocus?.unfocus(),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -281,9 +316,14 @@ class _StockInScreenState extends State<StockInScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.stockInBg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.stockIn.withOpacity(0.5)),
+                      border: Border.all(
+                        color: AppColors.stockIn.withOpacity(0.5),
+                      ),
                     ),
-                    child: const Icon(Icons.add_rounded, color: AppColors.stockIn),
+                    child: const Icon(
+                      Icons.add_rounded,
+                      color: AppColors.stockIn,
+                    ),
                   ),
                 ),
               ],
@@ -293,30 +333,45 @@ class _StockInScreenState extends State<StockInScreen> {
             // Date Picker Field
             const Text(
               'Tanggal & Waktu Transaksi',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
-            TextField(
+            TextFormField(
               controller: _dateController,
               readOnly: true,
               decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.calendar_today_rounded, color: AppColors.textMuted),
+                prefixIcon: Icon(
+                  Icons.calendar_today_rounded,
+                  color: AppColors.textMuted,
+                ),
               ),
+              onTapOutside: (event) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
             ),
             const SizedBox(height: 16),
 
             // Notes / Supplier Input
             const Text(
               'Catatan / Supplier (Opsional)',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
-            TextField(
+            TextFormField(
               controller: _noteController,
               maxLines: 2,
               decoration: const InputDecoration(
                 hintText: 'Contoh: Restock dari PT Maju Bersama',
               ),
+              onTapOutside: (event) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
             ),
           ],
         ),

@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/enum.dart';
+import 'package:flutter_catat_stok/core/utils/currency_input_formatter.dart';
 import 'package:flutter_catat_stok/core/utils/smooth_page_route.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
@@ -29,8 +30,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   late TextEditingController _sellPriceController;
   late TextEditingController _descriptionController;
 
-  String? _selectedCategory;
-  String _selectedUnit = 'Pcs';
+  final ValueNotifier<String?> _selectedCategory = ValueNotifier<String?>(null);
+  final ValueNotifier<String> _selectedUnit = ValueNotifier<String>('Pcs');
 
   final List<String> _units = [
     'Pcs',
@@ -62,10 +63,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
     _descriptionController = TextEditingController(text: p?.description ?? '');
     if (p != null) {
-      _selectedCategory = p.categoryName.trim().isNotEmpty
+      _selectedCategory.value = p.categoryName.trim().isNotEmpty
           ? p.categoryName
           : null;
-      _selectedUnit = _units.contains(p.unit) ? p.unit : 'Pcs';
+      _selectedUnit.value = _units.contains(p.unit) ? p.unit : 'Pcs';
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -97,22 +98,20 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         ),
       );
     } else {
-      if (_selectedCategory == null ||
-          !provider.categories.any((c) => c.name == _selectedCategory)) {
-        setState(() {
-          _selectedCategory = provider.categories.first.name;
-        });
+      if (_selectedCategory.value == null ||
+          !provider.categories.any((c) => c.name == _selectedCategory.value)) {
+        _selectedCategory.value = provider.categories.first.name;
       }
     }
   }
 
-  void _handleSave() async {
+  void _handleAddProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
     final selectedCategoryId = context
         .read<ProductProvider>()
         .categories
-        .firstWhere((c) => c.name == _selectedCategory)
+        .firstWhere((c) => c.name == _selectedCategory.value)
         .id;
 
     if (await context.read<ProductProvider>().addProduct(
@@ -121,19 +120,55 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         name: _nameController.text,
         sku: _skuController.text,
         categoryId: selectedCategoryId,
-        categoryName: _selectedCategory!,
+        categoryName: _selectedCategory.value!,
         currentStock: int.parse(_stockController.text),
         minimumStock: int.parse(_minStockController.text),
-        purchasePrice: int.parse(_buyPriceController.text),
-        recommendedSellingPrice: int.parse(_sellPriceController.text),
+        purchasePrice: int.parse(_buyPriceController.text.replaceAll('.', '')),
+        recommendedSellingPrice: int.parse(
+          _sellPriceController.text.replaceAll('.', ''),
+        ),
         description: _descriptionController.text,
-        unit: _selectedUnit,
+        unit: _selectedUnit.value,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
     )) {
       if (!mounted) return;
-      
+
+      Navigator.pop(context);
+    }
+  }
+
+  void _handleEditProduct() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final selectedCategoryId = context
+        .read<ProductProvider>()
+        .categories
+        .firstWhere((c) => c.name == _selectedCategory.value)
+        .id;
+
+    if (await context.read<ProductProvider>().updateProduct(
+      product: Product(
+        id: widget.product!.id,
+        name: _nameController.text,
+        sku: _skuController.text,
+        categoryId: selectedCategoryId,
+        categoryName: _selectedCategory.value!,
+        currentStock: int.parse(_stockController.text),
+        minimumStock: int.parse(_minStockController.text),
+        purchasePrice: int.parse(_buyPriceController.text.replaceAll('.', '')),
+        recommendedSellingPrice: int.parse(
+          _sellPriceController.text.replaceAll('.', ''),
+        ),
+        description: _descriptionController.text,
+        unit: _selectedUnit.value,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      ),
+    )) {
+      if (!mounted) return;
+
       Navigator.pop(context);
     }
   }
@@ -167,7 +202,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               ],
             ),
             child: ElevatedButton(
-              onPressed: isLoading ? null : _handleSave,
+              onPressed: isLoading
+                  ? null
+                  : isEdit
+                      ? _handleEditProduct
+                      : _handleAddProduct,
               child: isLoading
                   ? const SizedBox(
                       width: 22,
@@ -254,6 +293,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                     },
                   ),
                 ),
+                onTapOutside: (event) =>
+                    FocusManager.instance.primaryFocus?.unfocus(),
                 validator: (val) =>
                     val == null || val.isEmpty ? 'SKU wajib diisi' : null,
               ),
@@ -278,6 +319,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                     color: AppColors.textMuted,
                   ),
                 ),
+                onTapOutside: (event) =>
+                    FocusManager.instance.primaryFocus?.unfocus(),
                 validator: (val) => val == null || val.isEmpty
                     ? 'Nama produk wajib diisi'
                     : null,
@@ -292,16 +335,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       .where((name) => name.trim().isNotEmpty)
                       .toSet()
                       .toList();
-
-                  final String? effectiveCategory =
-                      (_selectedCategory != null &&
-                          categoryNames.contains(_selectedCategory))
-                      ? _selectedCategory
-                      : (categoryNames.isNotEmpty ? categoryNames.first : null);
-
-                  final String effectiveUnit = _units.contains(_selectedUnit)
-                      ? _selectedUnit
-                      : _units.first;
 
                   return Row(
                     children: [
@@ -318,29 +351,34 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               ),
                             ),
                             const SizedBox(height: 6),
-                            DropdownButtonFormField<String?>(
-                              value: effectiveCategory,
-                              decoration: const InputDecoration(
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 12,
-                                ),
-                              ),
-                              items: categoryNames
-                                  .map(
-                                    (name) => DropdownMenuItem<String?>(
-                                      value: name,
-                                      child: Text(
-                                        name,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
+                            ValueListenableBuilder<String?>(
+                              valueListenable: _selectedCategory,
+                              builder: (context, value, child) {
+                                return DropdownButtonFormField<String?>(
+                                  value: value,
+                                  decoration: const InputDecoration(
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 12,
                                     ),
-                                  )
-                                  .toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _selectedCategory = val);
-                                }
+                                  ),
+                                  items: categoryNames
+                                      .map(
+                                        (name) => DropdownMenuItem<String?>(
+                                          value: name,
+                                          child: Text(
+                                            name,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      _selectedCategory.value = val;
+                                    }
+                                  },
+                                );
                               },
                             ),
                           ],
@@ -360,26 +398,31 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               ),
                             ),
                             const SizedBox(height: 6),
-                            DropdownButtonFormField<String>(
-                              value: effectiveUnit,
-                              decoration: const InputDecoration(
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 12,
-                                ),
-                              ),
-                              items: _units
-                                  .map(
-                                    (u) => DropdownMenuItem<String>(
-                                      value: u,
-                                      child: Text(u),
+                            ValueListenableBuilder<String>(
+                              valueListenable: _selectedUnit,
+                              builder: (context, value, child) {
+                                return DropdownButtonFormField<String>(
+                                  value: value,
+                                  decoration: const InputDecoration(
+                                    contentPadding: EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 12,
                                     ),
-                                  )
-                                  .toList(),
-                              onChanged: (val) {
-                                if (val != null) {
-                                  setState(() => _selectedUnit = val);
-                                }
+                                  ),
+                                  items: _units
+                                      .map(
+                                        (u) => DropdownMenuItem<String>(
+                                          value: u,
+                                          child: Text(u),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      _selectedUnit.value = val;
+                                    }
+                                  },
+                                );
                               },
                             ),
                           ],
@@ -411,6 +454,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                           controller: _stockController,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(hintText: '0'),
+                          onTapOutside: (event) =>
+                              FocusManager.instance.primaryFocus?.unfocus(),
                         ),
                       ],
                     ),
@@ -433,6 +478,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                           controller: _minStockController,
                           keyboardType: TextInputType.number,
                           decoration: const InputDecoration(hintText: '5'),
+                          onTapOutside: (event) =>
+                              FocusManager.instance.primaryFocus?.unfocus(),
                         ),
                       ],
                     ),
@@ -449,7 +496,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Harga Beli (Rp)',
+                          'Harga Beli',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -460,7 +507,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         TextFormField(
                           controller: _buyPriceController,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(hintText: '0'),
+                          decoration: const InputDecoration(
+                            hintText: '0',
+                            prefixText: 'Rp ',
+                          ),
+                          inputFormatters: [CurrencyInputFormatter()],
+                          onTapOutside: (event) =>
+                              FocusManager.instance.primaryFocus?.unfocus(),
                         ),
                       ],
                     ),
@@ -471,7 +524,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Harga Jual (Rp)',
+                          'Harga Jual',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
@@ -482,7 +535,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         TextFormField(
                           controller: _sellPriceController,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(hintText: '0'),
+                          decoration: const InputDecoration(
+                            hintText: '0',
+                            prefixText: 'Rp ',
+                          ),
+                          inputFormatters: [CurrencyInputFormatter()],
+                          onTapOutside: (event) =>
+                              FocusManager.instance.primaryFocus?.unfocus(),
                         ),
                       ],
                     ),
@@ -507,6 +566,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 decoration: const InputDecoration(
                   hintText: 'Tuliskan catatan detail mengenai produk...',
                 ),
+                onTapOutside: (event) =>
+                    FocusManager.instance.primaryFocus?.unfocus(),
               ),
             ],
           ),

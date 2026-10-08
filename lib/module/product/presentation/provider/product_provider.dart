@@ -166,30 +166,31 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updateProduct({
-    required String id,
-    required String name,
-    required String categoryId,
-    required int stock,
-  }) async {
+  Future<bool> updateProduct({required Product product}) async {
     _isLoading = true;
     notifyListeners();
     try {
-      await _productRepository.updateProduct(
-        id: id,
-        name: name,
-        categoryId: categoryId,
-        stock: stock,
-      );
+      final response = await _productRepository.updateProduct(product: product);
+
+      if (response == null) {
+        throw Exception('Gagal mengupdate produk');
+      }
+
+      _products = _products
+          .map((x) => x.id == product.id ? response : x)
+          .toList();
       notifyListeners();
+      
       ScaffoldMessenger.of(gNavigatorKey.currentContext!).showSnackBar(
         const SnackBar(
           content: Text('Produk berhasil diupdate!'),
           backgroundColor: AppColors.stockIn,
         ),
       );
+      return true;
     } catch (e) {
       showFlashError('Tidak dapat mengupdate produk');
+      return false;
     } finally {
       _isLoading = false;
       notifyListeners();

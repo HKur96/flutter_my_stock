@@ -339,7 +339,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: TextField(
+                  child: TextFormField(
                     controller: _qtyController,
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
@@ -355,6 +355,8 @@ class _StockOutScreenState extends State<StockOutScreen> {
                         _quantity = n;
                       }
                     },
+                    onTapOutside: (event) =>
+                        FocusManager.instance.primaryFocus?.unfocus(),
                     decoration: InputDecoration(
                       suffixText: _selectedProduct?.unit ?? 'Pcs',
                     ),
@@ -393,7 +395,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
               ),
             ),
             const SizedBox(height: 6),
-            TextField(
+            TextFormField(
               controller: _dateController,
               readOnly: true,
               decoration: const InputDecoration(
@@ -402,6 +404,8 @@ class _StockOutScreenState extends State<StockOutScreen> {
                   color: AppColors.textMuted,
                 ),
               ),
+              onTapOutside: (event) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
             ),
             const SizedBox(height: 16),
 
@@ -415,12 +419,14 @@ class _StockOutScreenState extends State<StockOutScreen> {
               ),
             ),
             const SizedBox(height: 6),
-            TextField(
+            TextFormField(
               controller: _noteController,
               maxLines: 2,
               decoration: const InputDecoration(
                 hintText: 'Contoh: Dikirim ke cabang Surabaya',
               ),
+              onTapOutside: (event) =>
+                  FocusManager.instance.primaryFocus?.unfocus(),
             ),
           ],
         ),

@@ -1,4 +1,7 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/smooth_page_route.dart';
@@ -52,7 +55,9 @@ class ProductDetailScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    SmoothPageRoute(page: StockInScreen(initialProduct: product)),
+                    SmoothPageRoute(
+                      page: StockInScreen(initialProduct: product),
+                    ),
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -68,7 +73,9 @@ class ProductDetailScreen extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    SmoothPageRoute(page: StockOutScreen(initialProduct: product)),
+                    SmoothPageRoute(
+                      page: StockOutScreen(initialProduct: product),
+                    ),
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -123,7 +130,10 @@ class ProductDetailScreen extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(8),
@@ -139,9 +149,14 @@ class ProductDetailScreen extends StatelessWidget {
                 ),
                 const SizedBox(width: 10),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
-                    color: product.isLowStock ? AppColors.stockOutBg : AppColors.stockInBg,
+                    color: product.isLowStock
+                        ? AppColors.stockOutBg
+                        : AppColors.stockInBg,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -149,7 +164,9 @@ class ProductDetailScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: product.isLowStock ? AppColors.stockOut : AppColors.stockIn,
+                      color: product.isLowStock
+                          ? AppColors.stockOut
+                          : AppColors.stockIn,
                     ),
                   ),
                 ),
@@ -209,7 +226,9 @@ class ProductDetailScreen extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
-                              color: product.isLowStock ? AppColors.stockOut : AppColors.primary,
+                              color: product.isLowStock
+                                  ? AppColors.stockOut
+                                  : AppColors.primary,
                             ),
                           ),
                           const SizedBox(width: 6),
@@ -274,7 +293,7 @@ class ProductDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Rp ${product.purchasePrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                          CurrencyFormatter.format(product.purchasePrice.toDouble()),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -306,7 +325,7 @@ class ProductDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Rp ${product.recommendedSellingPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                          CurrencyFormatter.format(product.recommendedSellingPrice.toDouble()),
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,

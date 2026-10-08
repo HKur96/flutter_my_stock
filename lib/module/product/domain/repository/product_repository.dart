@@ -20,10 +20,5 @@ abstract class ProductRepository {
 
   Future<bool> deleteProduct(String id);
 
-  Future<Product?> updateProduct({
-    required String id,
-    required String name,
-    required String categoryId,
-    required int stock,
-  });
+  Future<Product?> updateProduct({required Product product});
 }
