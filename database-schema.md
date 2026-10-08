@@ -236,6 +236,10 @@ create table if not exists public.product_logs (
 
     action text not null,
 
+    pic text,
+
+    note text,
+
     old_data jsonb,
 
     new_data jsonb,
@@ -391,13 +395,33 @@ set search_path = public
 as $$
 declare
     v_action text;
+    v_pic text;
+    v_note text;
+    v_target_user_id uuid;
 begin
+    if (TG_OP = 'DELETE') then
+        v_target_user_id := OLD.user_id;
+    else
+        v_target_user_id := NEW.user_id;
+    end if;
+
+    -- Ambil nama pengguna (PIC) dari tabel profiles
+    select name into v_pic
+    from public.profiles
+    where id = v_target_user_id;
+
+    if v_pic is null or length(trim(v_pic)) = 0 then
+        v_pic := 'User';
+    end if;
+
     if (TG_OP = 'INSERT') then
         insert into public.product_logs (
             user_id,
             product_id,
             product_name,
             action,
+            pic,
+            note,
             old_data,
             new_data
         ) values (
@@ -405,6 +429,8 @@ begin
             NEW.id,
             NEW.name,
             'CREATE',
+            v_pic,
+            null,
             null,
             to_jsonb(NEW)
         );
@@ -420,11 +446,25 @@ begin
             v_action := 'UPDATE';
         end if;
 
+        -- Ambil catatan transaksi dari stock_transactions untuk STOCK_IN / STOCK_OUT
+        if (v_action in ('STOCK_IN', 'STOCK_OUT')) then
+            select note into v_note
+            from public.stock_transactions
+            where product_id = NEW.id
+              and user_id = NEW.user_id
+            order by created_at desc
+            limit 1;
+        else
+            v_note := null;
+        end if;
+
         insert into public.product_logs (
             user_id,
             product_id,
             product_name,
             action,
+            pic,
+            note,
             old_data,
             new_data
         ) values (
@@ -432,6 +472,8 @@ begin
             NEW.id,
             NEW.name,
             v_action,
+            v_pic,
+            v_note,
             to_jsonb(OLD),
             to_jsonb(NEW)
         );
@@ -443,6 +485,8 @@ begin
             product_id,
             product_name,
             action,
+            pic,
+            note,
             old_data,
             new_data
         ) values (
@@ -450,6 +494,8 @@ begin
             OLD.id,
             OLD.name,
             'DELETE',
+            v_pic,
+            null,
             to_jsonb(OLD),
             null
         );

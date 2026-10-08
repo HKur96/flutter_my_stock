@@ -7,8 +7,8 @@ import 'package:flutter_catat_stok/module/product/presentation/provider/product_
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/smooth_page_route.dart';
-import '../../../../screens/stock_in_screen.dart';
-import '../../../../screens/stock_out_screen.dart';
+import '../../../stock/presentation/screens/stock_in_screen.dart';
+import '../../../stock/presentation/screens/stock_out_screen.dart';
 import 'add_edit_product_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {

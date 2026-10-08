@@ -7,10 +7,10 @@ import '../core/theme/app_theme.dart';
 import '../core/utils/smooth_page_route.dart';
 import 'dashboard_screen.dart';
 import '../module/product/presentation/screens/product_list_screen.dart';
-import 'history_screen.dart';
+import '../module/stock/presentation/screens/history_screen.dart';
 import 'profile_screen.dart';
-import 'stock_in_screen.dart';
-import 'stock_out_screen.dart';
+import '../module/stock/presentation/screens/stock_in_screen.dart';
+import '../module/stock/presentation/screens/stock_out_screen.dart';
 import '../module/product/presentation/screens/add_edit_product_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {

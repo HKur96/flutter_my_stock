@@ -10,8 +10,8 @@ import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
 import '../models/mock_data.dart';
 import '../core/utils/smooth_page_route.dart';
-import 'stock_in_screen.dart';
-import 'stock_out_screen.dart';
+import '../module/stock/presentation/screens/stock_in_screen.dart';
+import '../module/stock/presentation/screens/stock_out_screen.dart';
 import '../module/product/presentation/screens/add_edit_product_screen.dart';
 import '../module/product/presentation/screens/manage_category_screen.dart';
 

@@ -8,6 +8,9 @@ import 'package:flutter_catat_stok/module/auth/presentation/screens/splash_scree
 import 'package:flutter_catat_stok/module/product/data/repository/product_repository_impl.dart';
 import 'package:flutter_catat_stok/module/product/domain/repository/product_repository.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
+import 'package:flutter_catat_stok/module/stock/data/repository/stock_repository_impl.dart';
+import 'package:flutter_catat_stok/module/stock/domain/repository/stock_repository.dart';
+import 'package:flutter_catat_stok/module/stock/presentation/provider/stock_provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'core/theme/app_theme.dart';
@@ -25,6 +28,7 @@ void main() async {
 
   final AuthRepository authRepository = AuthRepositoryImpl();
   final ProductRepository productRepository = ProductRepositoryImpl();
+  final StockRepository stockRepository = StockRepositoryImpl();
 
   runApp(
     MultiProvider(
@@ -32,6 +36,9 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider(authRepository)),
         ChangeNotifierProvider(
           create: (_) => ProductProvider(productRepository),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => StockProvider(stockRepository),
         ),
       ],
       child: const StokSayaApp(),
