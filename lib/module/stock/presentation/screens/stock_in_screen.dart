@@ -1,6 +1,12 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/core/config/enum.dart';
+import 'package:flutter_catat_stok/core/services/local_storage_service.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
+import 'package:flutter_catat_stok/module/stock/domain/dto/stock_transaction_dto.dart';
+import 'package:flutter_catat_stok/module/stock/presentation/provider/stock_provider.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 
@@ -45,26 +51,52 @@ class _StockInScreenState extends State<StockInScreen> {
   }
 
   void _handleSaveStockIn() async {
+    if (_selectedProduct == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Pilih produk terlebih dahulu!')),
+      );
+      return;
+    }
+
     setState(() {
       _isLoading = true;
     });
 
-    await Future.delayed(const Duration(milliseconds: 600));
+    final currentUser = await LocalStorageService().getUser();
+    if (currentUser == null) {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+      return;
+    }
 
     if (!mounted) return;
-    setState(() {
-      _isLoading = false;
-    });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Berhasil menambah $_quantity ${_selectedProduct?.unit ?? "Pcs"} stok ${_selectedProduct?.name}!',
-        ),
-        backgroundColor: AppColors.stockIn,
+    final response = await context.read<StockProvider>().stockIn(
+      StockTransactionDto(
+        userId: currentUser.id,
+        productId: _selectedProduct!.id,
+        type: StockTransactionType.stockIn,
+        quantity: _quantity,
+        purchasePrice: _selectedProduct!.purchasePrice,
+        createdAt: DateTime.now(),
+        note: _noteController.text.trim(),
       ),
     );
-    Navigator.pop(context);
+
+    if (!mounted) return;
+
+    if (response) {
+      await context.read<ProductProvider>().getProducts();
+      if (!mounted) return;
+      Navigator.pop(context);
+    } else {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -173,8 +205,26 @@ class _StockInScreenState extends State<StockInScreen> {
             Selector<ProductProvider, List<Product>>(
               selector: (_, p) => p.products,
               builder: (_, products, _) {
+                // Sync _selectedProduct with refreshed list to avoid stale reference
+                if (_selectedProduct != null) {
+                  final match = products.cast<Product?>().firstWhere(
+                    (p) => p!.id == _selectedProduct!.id,
+                    orElse: () => null,
+                  );
+                  if (match != _selectedProduct) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) setState(() => _selectedProduct = match);
+                    });
+                  }
+                }
+                final currentValue = _selectedProduct != null
+                    ? products.cast<Product?>().firstWhere(
+                        (p) => p!.id == _selectedProduct!.id,
+                        orElse: () => null,
+                      )
+                    : null;
                 return DropdownButtonFormField<Product>(
-                  value: _selectedProduct,
+                  value: currentValue,
                   isExpanded: true,
                   decoration: const InputDecoration(
                     prefixIcon: Icon(

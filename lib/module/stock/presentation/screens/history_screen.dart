@@ -170,6 +170,45 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           final item = filteredTrx[index];
                           final isIn =
                               item.productLogType == ProductLogType.stockIn;
+                          final isStockTransaction =
+                              item.productLogType == ProductLogType.stockIn ||
+                              item.productLogType == ProductLogType.stockOut;
+
+                          // Icon & color per log type
+                          final IconData iconData;
+                          final Color iconColor;
+                          final Color iconBgColor;
+                          switch (item.productLogType) {
+                            case ProductLogType.stockIn:
+                              iconData = Icons.arrow_downward_rounded;
+                              iconColor = AppColors.stockIn;
+                              iconBgColor = AppColors.stockInBg;
+                              break;
+                            case ProductLogType.stockOut:
+                              iconData = Icons.arrow_upward_rounded;
+                              iconColor = AppColors.stockOut;
+                              iconBgColor = AppColors.stockOutBg;
+                              break;
+                            case ProductLogType.create:
+                              iconData = Icons.add_circle_outline_rounded;
+                              iconColor = Colors.blue;
+                              iconBgColor = Colors.blue.withValues(alpha: 0.1);
+                              break;
+                            case ProductLogType.update:
+                              iconData = Icons.edit_outlined;
+                              iconColor = Colors.orange;
+                              iconBgColor = Colors.orange.withValues(alpha: 0.1);
+                              break;
+                            case ProductLogType.delete:
+                              iconData = Icons.delete_outline_rounded;
+                              iconColor = Colors.red;
+                              iconBgColor = Colors.red.withValues(alpha: 0.1);
+                              break;
+                            default:
+                              iconData = Icons.info_outline_rounded;
+                              iconColor = AppColors.textMuted;
+                              iconBgColor = AppColors.border;
+                          }
 
                           return Container(
                             padding: const EdgeInsets.all(16),
@@ -193,18 +232,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     Container(
                                       padding: const EdgeInsets.all(8),
                                       decoration: BoxDecoration(
-                                        color: isIn
-                                            ? AppColors.stockInBg
-                                            : AppColors.stockOutBg,
+                                        color: iconBgColor,
                                         borderRadius: BorderRadius.circular(10),
                                       ),
                                       child: Icon(
-                                        isIn
-                                            ? Icons.arrow_downward_rounded
-                                            : Icons.arrow_upward_rounded,
-                                        color: isIn
-                                            ? AppColors.stockIn
-                                            : AppColors.stockOut,
+                                        iconData,
+                                        color: iconColor,
                                         size: 18,
                                       ),
                                     ),
@@ -232,28 +265,48 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         ],
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: isIn
-                                            ? AppColors.stockInBg
-                                            : AppColors.stockOutBg,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Text(
-                                        '${isIn ? "+" : "-"}${item.newStock}',
-                                        style: TextStyle(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.bold,
+                                    if (isStockTransaction)
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
                                           color: isIn
-                                              ? AppColors.stockIn
-                                              : AppColors.stockOut,
+                                              ? AppColors.stockInBg
+                                              : AppColors.stockOutBg,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          '${isIn ? "+" : ""}${item.stockDifferent}',
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.bold,
+                                            color: isIn
+                                                ? AppColors.stockIn
+                                                : AppColors.stockOut,
+                                          ),
+                                        ),
+                                      )
+                                    else
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: iconBgColor,
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          item.productLogType.displayName,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
+                                            color: iconColor,
+                                          ),
                                         ),
                                       ),
-                                    ),
                                   ],
                                 ),
                                 const SizedBox(height: 12),

@@ -25,7 +25,7 @@ enum ProductLogType {
     }
   }
 
-  String get displayName => switch(this) {
+  String get displayName => switch (this) {
     ProductLogType.all => 'Semua',
     ProductLogType.create => 'Buat',
     ProductLogType.update => 'Edit',
@@ -33,4 +33,34 @@ enum ProductLogType {
     ProductLogType.stockIn => 'Stok Masuk (+)',
     ProductLogType.stockOut => 'Stok Keluar (-)',
   };
+}
+
+enum StockTransactionType {
+  stockIn,
+  stockOut,
+  opname;
+
+  static String toValue(StockTransactionType type) {
+    switch (type) {
+      case StockTransactionType.stockIn:
+        return 'IN';
+      case StockTransactionType.stockOut:
+        return 'OUT';
+      case StockTransactionType.opname:
+        return 'OPNAME';
+    }
+  }
+
+  static StockTransactionType fromValue(String value) {
+    switch (value) {
+      case 'IN':
+        return StockTransactionType.stockIn;
+      case 'OUT':
+        return StockTransactionType.stockOut;
+      case 'OPNAME':
+        return StockTransactionType.opname;
+      default:
+        return StockTransactionType.opname;
+    }
+  }
 }

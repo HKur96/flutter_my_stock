@@ -31,6 +31,12 @@ class ProductLog {
   String get sku =>
       (newData['sku'] ?? oldData['sku'] ?? productId).toString();
 
+  int get stockDifferent {
+    final oldStock = oldData['current_stock'] as int? ?? 0;
+    final newStock = newData['current_stock'] as int? ?? 0;
+    return newStock - oldStock;
+  }
+
   ProductLog copyWith({
     String? id,
     String? productId,
