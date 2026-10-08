@@ -218,6 +218,36 @@ create table if not exists public.stock_opnames (
 
 
 -- ============================================================
+-- PRODUCT LOGS (AUDIT TRAIL)
+-- ============================================================
+
+create table if not exists public.product_logs (
+    id uuid primary key default gen_random_uuid(),
+
+    user_id uuid not null
+        references auth.users(id)
+        on delete cascade,
+
+    product_id uuid
+        references public.products(id)
+        on delete set null,
+
+    product_name text not null,
+
+    action text not null,
+
+    old_data jsonb,
+
+    new_data jsonb,
+
+    created_at timestamptz not null default now(),
+
+    constraint product_logs_action_check
+        check (action in ('CREATE', 'UPDATE', 'DELETE', 'STOCK_IN', 'STOCK_OUT'))
+);
+
+
+-- ============================================================
 -- INDEXES
 -- ============================================================
 
@@ -259,6 +289,18 @@ on public.stock_opnames(user_id);
 
 create index if not exists stock_opnames_product_id_idx
 on public.stock_opnames(product_id);
+
+
+create index if not exists product_logs_user_id_idx
+on public.product_logs(user_id);
+
+
+create index if not exists product_logs_product_id_idx
+on public.product_logs(product_id);
+
+
+create index if not exists product_logs_created_at_idx
+on public.product_logs(created_at desc);
 
 
 -- ============================================================
@@ -338,6 +380,97 @@ execute function public.handle_new_user();
 
 
 -- ============================================================
+-- PRODUCT AUDIT LOG TRIGGER
+-- ============================================================
+
+create or replace function public.handle_product_audit_log()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+    v_action text;
+begin
+    if (TG_OP = 'INSERT') then
+        insert into public.product_logs (
+            user_id,
+            product_id,
+            product_name,
+            action,
+            old_data,
+            new_data
+        ) values (
+            NEW.user_id,
+            NEW.id,
+            NEW.name,
+            'CREATE',
+            null,
+            to_jsonb(NEW)
+        );
+        return NEW;
+
+    elsif (TG_OP = 'UPDATE') then
+        -- Deteksi otomatis jenis perubahan stok vs editan data produk
+        if (OLD.current_stock < NEW.current_stock and OLD.name = NEW.name and OLD.purchase_price = NEW.purchase_price) then
+            v_action := 'STOCK_IN';
+        elsif (OLD.current_stock > NEW.current_stock and OLD.name = NEW.name and OLD.purchase_price = NEW.purchase_price) then
+            v_action := 'STOCK_OUT';
+        else
+            v_action := 'UPDATE';
+        end if;
+
+        insert into public.product_logs (
+            user_id,
+            product_id,
+            product_name,
+            action,
+            old_data,
+            new_data
+        ) values (
+            NEW.user_id,
+            NEW.id,
+            NEW.name,
+            v_action,
+            to_jsonb(OLD),
+            to_jsonb(NEW)
+        );
+        return NEW;
+
+    elsif (TG_OP = 'DELETE') then
+        insert into public.product_logs (
+            user_id,
+            product_id,
+            product_name,
+            action,
+            old_data,
+            new_data
+        ) values (
+            OLD.user_id,
+            OLD.id,
+            OLD.name,
+            'DELETE',
+            to_jsonb(OLD),
+            null
+        );
+        return OLD;
+    end if;
+
+    return null;
+end;
+$$;
+
+
+drop trigger if exists on_product_change_audit_log
+on public.products;
+
+create trigger on_product_change_audit_log
+after insert or update or delete on public.products
+for each row
+execute function public.handle_product_audit_log();
+
+
+-- ============================================================
 -- ROW LEVEL SECURITY
 -- ============================================================
 
@@ -346,6 +479,7 @@ alter table public.categories enable row level security;
 alter table public.products enable row level security;
 alter table public.stock_transactions enable row level security;
 alter table public.stock_opnames enable row level security;
+alter table public.product_logs enable row level security;
 
 
 -- ============================================================
@@ -508,6 +642,22 @@ using (
 create policy "Users can view own stock opnames"
 on public.stock_opnames
 for select
+using (
+    auth.uid() = user_id
+);
+
+
+-- ============================================================
+-- PRODUCT LOGS POLICIES
+-- ============================================================
+
+drop policy if exists "Users can view own product logs"
+on public.product_logs;
+
+create policy "Users can view own product logs"
+on public.product_logs
+for select
+to authenticated
 using (
     auth.uid() = user_id
 );

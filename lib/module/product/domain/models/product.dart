@@ -51,8 +51,38 @@ class Product {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is Product && runtimeType == other.runtimeType && id == other.id;
+      other is Product &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          name == other.name &&
+          sku == other.sku &&
+          unit == other.unit &&
+          categoryId == other.categoryId &&
+          categoryName == other.categoryName &&
+          purchasePrice == other.purchasePrice &&
+          recommendedSellingPrice == other.recommendedSellingPrice &&
+          minimumStock == other.minimumStock &&
+          currentStock == other.currentStock &&
+          isActive == other.isActive &&
+          createdAt == other.createdAt &&
+          updatedAt == other.updatedAt &&
+          description == other.description;
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode => Object.hash(
+        id,
+        name,
+        sku,
+        unit,
+        categoryId,
+        categoryName,
+        purchasePrice,
+        recommendedSellingPrice,
+        minimumStock,
+        currentStock,
+        isActive,
+        createdAt,
+        updatedAt,
+        description,
+      );
 }

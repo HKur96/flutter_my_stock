@@ -132,8 +132,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
           // Product List Area
           Selector<ProductProvider, List<Product>>(
             selector: (_, p) => p.products,
+            shouldRebuild: (previous, next) => true,
             builder: (context, products, _) {
-              // TODO: SHOULD BE REBUILD AFTER EDIT PRODUCT
               final filteredProducts = products.where((product) {
                 final matchesCategory =
                     _selectedCategory == 'Semua' ||

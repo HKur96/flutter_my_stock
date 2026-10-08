@@ -183,7 +183,7 @@ class ProductProvider with ChangeNotifier {
         throw Exception('Gagal mengupdate produk');
       }
 
-      _selectedProduct = product;
+      _selectedProduct = response;
       _products = _products
           .map((x) => x.id == product.id ? response : x)
           .toList();
