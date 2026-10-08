@@ -10,6 +10,13 @@ class ProductProvider with ChangeNotifier {
 
   ProductProvider(this._productRepository);
 
+  Product? _selectedProduct;
+  Product? get selectedProduct => _selectedProduct;
+  set selectedProduct(Product? product) {
+    _selectedProduct = product;
+    notifyListeners();
+  }
+
   List<CategoryItem> _categories = [];
   List<Product> _products = [];
   bool _isLoading = false;
@@ -176,11 +183,12 @@ class ProductProvider with ChangeNotifier {
         throw Exception('Gagal mengupdate produk');
       }
 
+      _selectedProduct = product;
       _products = _products
           .map((x) => x.id == product.id ? response : x)
           .toList();
       notifyListeners();
-      
+
       ScaffoldMessenger.of(gNavigatorKey.currentContext!).showSnackBar(
         const SnackBar(
           content: Text('Produk berhasil diupdate!'),
