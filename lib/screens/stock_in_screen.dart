@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
+import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
+import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
-import '../models/mock_data.dart';
 
 class StockInScreen extends StatefulWidget {
-  final ProductItem? initialProduct;
+  final Product? initialProduct;
 
   const StockInScreen({super.key, this.initialProduct});
 
@@ -12,7 +14,7 @@ class StockInScreen extends StatefulWidget {
 }
 
 class _StockInScreenState extends State<StockInScreen> {
-  ProductItem? _selectedProduct;
+  Product? _selectedProduct;
   int _quantity = 1;
   final _qtyController = TextEditingController(text: '1');
   final _noteController = TextEditingController();
@@ -22,7 +24,7 @@ class _StockInScreenState extends State<StockInScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedProduct = widget.initialProduct ?? MockData.products.first;
+    _selectedProduct = widget.initialProduct ?? context.read<ProductProvider>().products.first;
   }
 
   void _incrementQty() {
@@ -151,23 +153,28 @@ class _StockInScreenState extends State<StockInScreen> {
               style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
             ),
             const SizedBox(height: 6),
-            DropdownButtonFormField<ProductItem>(
-              value: _selectedProduct,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.inventory_2_outlined, color: AppColors.textMuted),
-              ),
-              items: MockData.products.map((p) {
-                return DropdownMenuItem(
-                  value: p,
-                  child: Text('${p.name} (${p.sku})', overflow: TextOverflow.ellipsis),
+            Selector<ProductProvider, List<Product>>(
+              selector: (_, p) => p.products,
+              builder: (_, products, _) {
+                return DropdownButtonFormField<Product>(
+                  value: _selectedProduct,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(Icons.inventory_2_outlined, color: AppColors.textMuted),
+                  ),
+                  items: products.map((p) {
+                    return DropdownMenuItem(
+                      value: p,
+                      child: Text('${p.name} (${p.sku})', overflow: TextOverflow.ellipsis),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedProduct = val;
+                    });
+                  },
                 );
-              }).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _selectedProduct = val;
-                });
-              },
+              }
             ),
             const SizedBox(height: 16),
 
@@ -182,22 +189,22 @@ class _StockInScreenState extends State<StockInScreen> {
                 ),
                 child: Row(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        _selectedProduct!.imageUrl,
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 50,
-                          height: 50,
-                          color: AppColors.inputBg,
-                          child: const Icon(Icons.inventory_2_outlined, color: AppColors.textMuted),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
+                    // ClipRRect(
+                    //   borderRadius: BorderRadius.circular(10),
+                    //   child: Image.network(
+                    //     _selectedProduct!.imageUrl,
+                    //     width: 50,
+                    //     height: 50,
+                    //     fit: BoxFit.cover,
+                    //     errorBuilder: (_, __, ___) => Container(
+                    //       width: 50,
+                    //       height: 50,
+                    //       color: AppColors.inputBg,
+                    //       child: const Icon(Icons.inventory_2_outlined, color: AppColors.textMuted),
+                    //     ),
+                    //   ),
+                    // ),
+                    // const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -211,7 +218,7 @@ class _StockInScreenState extends State<StockInScreen> {
                             ),
                           ),
                           Text(
-                            'Stok Sekarang: ${_selectedProduct!.stock} ${_selectedProduct!.unit}',
+                            'Stok Sekarang: ${_selectedProduct!.currentStock} ${_selectedProduct!.unit}',
                             style: const TextStyle(
                               fontSize: 12,
                               color: AppColors.textSecondary,

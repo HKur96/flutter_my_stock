@@ -88,6 +88,10 @@ create table if not exists public.products (
 
     sku text,
 
+    unit text,
+
+    description text,
+
     purchase_price numeric(15,2) not null default 0,
 
     recommended_selling_price numeric(15,2) not null default 0,
@@ -434,22 +438,31 @@ on public.products;
 create policy "Users can view own products"
 on public.products
 for select
+to authenticated
 using (
     auth.uid() = user_id
 );
 
 
+drop policy if exists "Users can insert own products"
+on public.products;
+
 create policy "Users can insert own products"
 on public.products
 for insert
+to authenticated
 with check (
     auth.uid() = user_id
 );
 
 
+drop policy if exists "Users can update own products"
+on public.products;
+
 create policy "Users can update own products"
 on public.products
 for update
+to authenticated
 using (
     auth.uid() = user_id
 )
@@ -458,9 +471,13 @@ with check (
 );
 
 
+drop policy if exists "Users can delete own products"
+on public.products;
+
 create policy "Users can delete own products"
 on public.products
 for delete
+to authenticated
 using (
     auth.uid() = user_id
 );
@@ -812,6 +829,14 @@ begin
     return v_opname;
 end;
 $$;
+
+
+-- ============================================================
+-- TABLE PERMISSIONS
+-- ============================================================
+
+grant select, insert, update, delete on all tables in schema public to authenticated;
+grant usage, select on all sequences in schema public to authenticated;
 
 
 -- ============================================================

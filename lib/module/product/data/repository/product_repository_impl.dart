@@ -1,6 +1,7 @@
 import 'package:flutter_catat_stok/core/services/local_storage_service.dart';
 import 'package:flutter_catat_stok/core/services/supabase_service.dart';
 import 'package:flutter_catat_stok/module/product/data/models/category_model.dart';
+import 'package:flutter_catat_stok/module/product/data/models/product_model.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/domain/repository/product_repository.dart';
@@ -15,7 +16,8 @@ class ProductRepositoryImpl implements ProductRepository {
       final res = await _client
           .from('categories')
           .select('''
-            id, name, 
+            id, 
+            name, 
             products(
               id,
               name,
@@ -94,16 +96,97 @@ class ProductRepositoryImpl implements ProductRepository {
           .select()
           .single();
 
-      print('updated category: ${updatedCategory['name']}');
-
       return CategoryItem(
         id: updatedCategory['id'],
         name: updatedCategory['name'],
         products: products,
       );
-    } on PostgrestException catch (e, s) {
-      print('cok $e\n$s');
+    } on PostgrestException catch (_) {
       return null;
     }
+  }
+
+  @override
+  Future<Product?> addProduct({required Product product}) async {
+    try {
+      final currentUser = await LocalStorageService().getUser();
+      if (currentUser == null) {
+        throw Exception('User tidak ditemukan');
+      }
+
+      final response = await _client
+          .from('products')
+          .insert({...product.toJson(), 'user_id': currentUser.id})
+          .select('''
+              id,
+              name,
+              sku,
+              purchase_price,
+              recommended_selling_price,
+              minimum_stock,
+              current_stock,
+              is_active,
+              created_at,
+              updated_at,
+              unit,
+              description,
+              categories (
+                id, 
+                name
+              )
+      ''')
+          .single();
+      return ProductModel.fromJson(response);
+    } catch (e) {
+      print(e);
+      return null;
+    }
+  }
+
+  @override
+  Future<bool> deleteProduct(String id) {
+    // TODO: implement deleteProduct
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<List<Product>> getProducts() async {
+    try {
+      final response = await _client.from('products').select('''
+              id,
+              name,
+              sku,
+              purchase_price,
+              recommended_selling_price,
+              minimum_stock,
+              current_stock,
+              is_active,
+              created_at,
+              updated_at,
+              unit,
+              description,
+              categories (
+                id, 
+                name
+              )
+      ''');
+      return (response as List)
+          .map<Product>((x) => ProductModel.fromJson(x))
+          .toList();
+    } catch (e, s) {
+      print('error getProducts $e\n$s');
+      return [];
+    }
+  }
+
+  @override
+  Future<Product?> updateProduct({
+    required String id,
+    required String name,
+    required String categoryId,
+    required int stock,
+  }) {
+    // TODO: implement updateProduct
+    throw UnimplementedError();
   }
 }

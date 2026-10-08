@@ -12,35 +12,50 @@ class ProductModel extends Product {
     required super.isActive,
     required super.createdAt,
     required super.updatedAt,
+    required super.categoryId,
+    required super.categoryName,
+    required super.unit,
+    required super.description,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
-    return ProductModel(
-      id: json['id'],
-      name: json['name'],
-      sku: json['sku'],
-      purchasePrice: json['purchase_price'],
-      recommendedSellingPrice: json['recommended_selling_price'],
-      minimumStock: json['minimum_stock'],
-      currentStock: json['current_stock'],
-      isActive: json['is_active'],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
-    );
-  }
+    final cat = json['categories'];
+    String catId = json['category_id']?.toString() ?? '';
+    String catName = json['category_name']?.toString() ?? '';
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'sku': sku,
-      'purchase_price': purchasePrice,
-      'recommended_selling_price': recommendedSellingPrice,
-      'minimum_stock': minimumStock,
-      'current_stock': currentStock,
-      'is_active': isActive,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
-    };
+    if (cat is Map<String, dynamic>) {
+      if (catId.isEmpty && cat['id'] != null) {
+        catId = cat['id'].toString();
+      }
+      if (catName.isEmpty && cat['name'] != null) {
+        catName = cat['name'].toString();
+      }
+    }
+
+    String unitVal = json['unit']?.toString() ?? '';
+    if (unitVal.trim().isEmpty) {
+      unitVal = 'Pcs';
+    }
+
+    return ProductModel(
+      id: json['id']?.toString() ?? '',
+      name: json['name'] ?? '',
+      sku: json['sku'] ?? '',
+      unit: unitVal,
+      categoryId: catId,
+      categoryName: catName,
+      purchasePrice: json['purchase_price'] ?? 0,
+      recommendedSellingPrice: json['recommended_selling_price'] ?? 0,
+      minimumStock: json['minimum_stock'] ?? 0,
+      currentStock: json['current_stock'] ?? 0,
+      isActive: json['is_active'] ?? true,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : DateTime.now(),
+      description: json['description'] ?? '',
+    );
   }
 }

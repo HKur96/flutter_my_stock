@@ -3,6 +3,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/extensions.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
 import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
@@ -33,11 +35,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadDatas() async {
     await context.read<ProductProvider>().getCategories();
+    await context.read<ProductProvider>().getProducts();
   }
 
   @override
   Widget build(BuildContext context) {
-    final lowStockItems = MockData.products.where((p) => p.isLowStock).toList();
     final recentTrx = MockData.transactions;
 
     return Scaffold(
@@ -64,23 +66,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   mainAxisSpacing: 12,
                   childAspectRatio: 1.5,
                   children: [
-                    _buildKpiCard(
-                      title: 'Total Produk',
-                      value: '${MockData.products.length} SKU',
-                      color: AppColors.primary,
-                      bgColor: AppColors.primaryLight,
+                    Selector<ProductProvider, List<Product>>(
+                      selector: (_, provider) => provider.products,
+                      builder: (context, products, _) {
+                        return _buildKpiCard(
+                          title: 'Total Produk',
+                          value: '${products.length} SKU',
+                          color: AppColors.primary,
+                          bgColor: AppColors.primaryLight,
+                        );
+                      },
                     ),
-                    _buildKpiCard(
-                      title: 'Stok Menipis',
-                      value: '${lowStockItems.length} Item',
-                      color: AppColors.warning,
-                      bgColor: AppColors.warningBg,
+                    Selector<ProductProvider, List<Product>>(
+                      selector: (_, provider) => provider.lowStockItems,
+                      builder: (context, lowStockItems, _) {
+                        return _buildKpiCard(
+                          title: 'Stok Menipis',
+                          value: '${lowStockItems.length} Item',
+                          color: AppColors.warning,
+                          bgColor: AppColors.warningBg,
+                        );
+                      },
                     ),
-                    Consumer<ProductProvider>(
-                      builder: (context, provider, _) {
+                    Selector<ProductProvider, List<CategoryItem>>(
+                      selector: (_, provider) => provider.categories,
+                      builder: (context, categories, _) {
                         return _buildKpiCard(
                           title: 'Total Kategori',
-                          value: '${provider.categories.length} Kategori',
+                          value: '${categories.length} Kategori',
                           color: Colors.purple,
                           bgColor: Colors.purple.shade50,
                         );
@@ -152,8 +165,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         color: AppColors.primary,
                         bgColor: AppColors.primaryLight,
                         onTap: () {
-                          final categories =
-                              context.read<ProductProvider>().categories;
+                          final categories = context
+                              .read<ProductProvider>()
+                              .categories;
                           if (categories.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -201,124 +215,141 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 24),
 
                 // Low Stock Alerts Section
-                if (lowStockItems.isNotEmpty) ...[
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Peringatan Stok Menipis ⚠️',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: () {
-                          if (widget.onNavigateToTab != null) {
-                            widget.onNavigateToTab!(1); // Go to Products tab
-                          }
-                        },
-                        child: const Text('Lihat Semua'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: lowStockItems.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final item = lowStockItems[index];
-                      return Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: AppColors.warning.withOpacity(0.3),
-                          ),
-                        ),
-                        child: Row(
+                Selector<ProductProvider, List<Product>>(
+                  selector: (_, provider) => provider.lowStockItems,
+                  builder: (context, lowStockItems, _) {
+                    if (lowStockItems.isEmpty) return const SizedBox.shrink();
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(10),
-                              child: Image.network(
-                                item.imageUrl,
-                                width: 44,
-                                height: 44,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  width: 44,
-                                  height: 44,
-                                  color: AppColors.inputBg,
-                                  child: const Icon(
-                                    Icons.inventory_2_outlined,
-                                    color: AppColors.textMuted,
-                                  ),
-                                ),
+                            const Text(
+                              'Peringatan Stok Menipis ⚠️',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
                               ),
                             ),
-                            const SizedBox(width: 14),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            TextButton(
+                              onPressed: () {
+                                if (widget.onNavigateToTab != null) {
+                                  widget.onNavigateToTab!(
+                                    1,
+                                  ); // Go to Products tab
+                                }
+                              },
+                              child: const Text('Lihat Semua'),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        ListView.separated(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: lowStockItems.length,
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
+                          itemBuilder: (context, index) {
+                            final item = lowStockItems[index];
+                            return Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                  color: AppColors.warning.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Row(
                                 children: [
-                                  Text(
-                                    item.name,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppColors.textPrimary,
+                                  // ClipRRect(
+                                  //   borderRadius: BorderRadius.circular(10),
+                                  //   child: Image.network(
+                                  //     item.imageUrl,
+                                  //     width: 44,
+                                  //     height: 44,
+                                  //     fit: BoxFit.cover,
+                                  //     errorBuilder: (_, __, ___) => Container(
+                                  //       width: 44,
+                                  //       height: 44,
+                                  //       color: AppColors.inputBg,
+                                  //       child: const Icon(
+                                  //         Icons.inventory_2_outlined,
+                                  //         color: AppColors.textMuted,
+                                  //       ),
+                                  //     ),
+                                  //   ),
+                                  // ),
+                                  // const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.name,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.textPrimary,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'Sisa Stok: ${item.currentStock} ${item.unit} (Min. ${item.minimumStock})',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.stockOut,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  Text(
-                                    'Sisa Stok: ${item.stock} ${item.unit} (Min. ${item.minStock})',
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: AppColors.stockOut,
-                                      fontWeight: FontWeight.w600,
+                                  ElevatedButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        SmoothPageRoute(
+                                          page: StockInScreen(
+                                            initialProduct: item,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.warning,
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 14,
+                                        vertical: 8,
+                                      ),
+                                      minimumSize: Size.zero,
+                                      tapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                    child: const Text(
+                                      '+ Stok',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                            ),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  SmoothPageRoute(
-                                    page: StockInScreen(initialProduct: item),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.warning,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14,
-                                  vertical: 8,
-                                ),
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              child: const Text(
-                                '+ Stok',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                        const SizedBox(height: 24),
+                      ],
+                    );
+                  },
+                ),
 
                 // Recent Activities Header
                 Row(

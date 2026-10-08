@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
 import 'package:flutter_catat_stok/module/product/presentation/screens/manage_category_screen.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../models/mock_data.dart';
 import '../../../../core/utils/smooth_page_route.dart';
 import 'product_detail_screen.dart';
 import 'add_edit_product_screen.dart';
@@ -21,16 +21,13 @@ class _ProductListScreenState extends State<ProductListScreen> {
   String _searchQuery = '';
 
   @override
-  Widget build(BuildContext context) {
-    final filteredProducts = MockData.products.where((product) {
-      final matchesCategory =
-          _selectedCategory == 'Semua' || product.category == _selectedCategory;
-      final matchesSearch =
-          product.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          product.sku.toLowerCase().contains(_searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    }).toList();
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -45,37 +42,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
             },
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'product_list_fab',
-        onPressed: () {
-          final categories = context.read<ProductProvider>().categories;
-          if (categories.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  'Buat kategori terlebih dahulu sebelum menambah produk.',
-                ),
-                backgroundColor: AppColors.warning,
-              ),
-            );
-            Navigator.push(
-              context,
-              SmoothPageRoute(page: const ManageCategoryScreen()),
-            );
-          } else {
-            Navigator.push(
-              context,
-              SmoothPageRoute(page: const AddEditProductScreen()),
-            );
-          }
-        },
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
-        label: const Text(
-          'Tambah Produk',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
       ),
       body: Column(
         children: [
@@ -163,187 +129,207 @@ class _ProductListScreenState extends State<ProductListScreen> {
           const Divider(height: 1, thickness: 1, color: AppColors.border),
 
           // Product List Area
-          Expanded(
-            child: filteredProducts.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.inventory_2_outlined,
-                          size: 64,
-                          color: AppColors.textMuted.withOpacity(0.5),
-                        ),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Produk tidak ditemukan',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: filteredProducts.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final item = filteredProducts[index];
-                      return InkWell(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            SmoothPageRoute(
-                              page: ProductDetailScreen(product: item),
+          Selector<ProductProvider, List<Product>>(
+            selector: (_, p) => p.products,
+            builder: (context, products, _) {
+              final filteredProducts = products.where((product) {
+                final matchesCategory =
+                    _selectedCategory == 'Semua' ||
+                    product.categoryName == _selectedCategory;
+                final matchesSearch =
+                    product.name.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    ) ||
+                    product.sku.toLowerCase().contains(
+                      _searchQuery.toLowerCase(),
+                    );
+                return matchesCategory && matchesSearch;
+              }).toList();
+
+              return Expanded(
+                child: filteredProducts.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.inventory_2_outlined,
+                              size: 64,
+                              color: AppColors.textMuted.withOpacity(0.5),
                             ),
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(16),
-                        child: Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.border),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Produk tidak ditemukan',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textSecondary,
                               ),
-                            ],
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.network(
-                                  item.imageUrl,
-                                  width: 70,
-                                  height: 70,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) => Container(
-                                    width: 70,
-                                    height: 70,
-                                    color: AppColors.inputBg,
-                                    child: const Icon(
-                                      Icons.inventory_2_outlined,
-                                      color: AppColors.textMuted,
-                                    ),
-                                  ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: filteredProducts.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final item = filteredProducts[index];
+                          return InkWell(
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                SmoothPageRoute(
+                                  page: ProductDetailScreen(product: item),
                                 ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Container(
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: AppColors.surface,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: AppColors.border),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.02),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 14),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // ClipRRect(
+                                  //   borderRadius: BorderRadius.circular(12),
+                                  //   child: Image.network(
+                                  //     item.imageUrl,
+                                  //     width: 70,
+                                  //     height: 70,
+                                  //     fit: BoxFit.cover,
+                                  //     errorBuilder: (_, __, ___) => Container(
+                                  //       width: 70,
+                                  //       height: 70,
+                                  //       color: AppColors.inputBg,
+                                  //       child: const Icon(
+                                  //         Icons.inventory_2_outlined,
+                                  //         color: AppColors.textMuted,
+                                  //       ),
+                                  //     ),
+                                  //   ),
+                                  // ),
+                                  // const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primaryLight,
-                                            borderRadius: BorderRadius.circular(
-                                              6,
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: AppColors.primaryLight,
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                item.categoryName,
+                                                style: const TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppColors.primary,
+                                                ),
+                                              ),
                                             ),
-                                          ),
-                                          child: Text(
-                                            item.category,
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.primary,
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 2,
+                                                  ),
+                                              decoration: BoxDecoration(
+                                                color: item.isLowStock
+                                                    ? AppColors.stockOutBg
+                                                    : AppColors.stockInBg,
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                item.isLowStock
+                                                    ? 'Stok Menipis'
+                                                    : 'Tersedia',
+                                                style: TextStyle(
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: item.isLowStock
+                                                      ? AppColors.stockOut
+                                                      : AppColors.stockIn,
+                                                ),
+                                              ),
                                             ),
-                                          ),
+                                          ],
                                         ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: item.isLowStock
-                                                ? AppColors.stockOutBg
-                                                : AppColors.stockInBg,
-                                            borderRadius: BorderRadius.circular(
-                                              6,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            item.isLowStock
-                                                ? 'Stok Menipis'
-                                                : 'Tersedia',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: item.isLowStock
-                                                  ? AppColors.stockOut
-                                                  : AppColors.stockIn,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      item.name,
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    Text(
-                                      'SKU: ${item.sku}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.textMuted,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
+                                        const SizedBox(height: 6),
                                         Text(
-                                          'Rp ${item.sellPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                                          item.name,
                                           style: const TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.bold,
-                                            color: AppColors.primary,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Stok: ${item.stock} ${item.unit}',
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.bold,
                                             color: AppColors.textPrimary,
                                           ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                        Text(
+                                          'SKU: ${item.sku}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.textMuted,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              'Rp ${item.recommendedSellingPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                                              style: const TextStyle(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.primary,
+                                              ),
+                                            ),
+                                            Text(
+                                              'Stok: ${item.currentStock} ${item.unit}',
+                                              style: const TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.bold,
+                                                color: AppColors.textPrimary,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                            ),
+                          );
+                        },
+                      ),
+              );
+            },
           ),
         ],
       ),

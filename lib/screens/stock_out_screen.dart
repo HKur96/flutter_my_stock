@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
+import 'package:provider/provider.dart';
 import '../core/theme/app_theme.dart';
-import '../models/mock_data.dart';
+import '../module/product/presentation/provider/product_provider.dart';
 
 class StockOutScreen extends StatefulWidget {
-  final ProductItem? initialProduct;
+  final Product? initialProduct;
 
   const StockOutScreen({super.key, this.initialProduct});
 
@@ -12,7 +14,7 @@ class StockOutScreen extends StatefulWidget {
 }
 
 class _StockOutScreenState extends State<StockOutScreen> {
-  ProductItem? _selectedProduct;
+  Product? _selectedProduct;
   int _quantity = 1;
   final _qtyController = TextEditingController(text: '1');
   final _noteController = TextEditingController();
@@ -31,11 +33,12 @@ class _StockOutScreenState extends State<StockOutScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedProduct = widget.initialProduct ?? MockData.products.first;
+    _selectedProduct =
+        widget.initialProduct ?? context.read<ProductProvider>().products.first;
   }
 
   void _incrementQty() {
-    final maxStock = _selectedProduct?.stock ?? 999;
+    final maxStock = _selectedProduct?.currentStock ?? 999;
     if (_quantity < maxStock) {
       setState(() {
         _quantity++;
@@ -43,7 +46,9 @@ class _StockOutScreenState extends State<StockOutScreen> {
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Jumlah melebihi stok yang tersedia ($maxStock)!')),
+        SnackBar(
+          content: Text('Jumlah melebihi stok yang tersedia ($maxStock)!'),
+        ),
       );
     }
   }
@@ -71,7 +76,9 @@ class _StockOutScreenState extends State<StockOutScreen> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Berhasil mengeluarkan $_quantity ${_selectedProduct?.unit ?? "Pcs"} stok ${_selectedProduct?.name}!'),
+        content: Text(
+          'Berhasil mengeluarkan $_quantity ${_selectedProduct?.unit ?? "Pcs"} stok ${_selectedProduct?.name}!',
+        ),
         backgroundColor: AppColors.stockOut,
       ),
     );
@@ -103,15 +110,18 @@ class _StockOutScreenState extends State<StockOutScreen> {
         ),
         child: ElevatedButton.icon(
           onPressed: _isLoading ? null : _handleSaveStockOut,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.stockOut,
-          ),
-          icon: _isLoading ? const SizedBox.shrink() : const Icon(Icons.check_rounded, color: Colors.white),
+          style: ElevatedButton.styleFrom(backgroundColor: AppColors.stockOut),
+          icon: _isLoading
+              ? const SizedBox.shrink()
+              : const Icon(Icons.check_rounded, color: Colors.white),
           label: _isLoading
               ? const SizedBox(
                   width: 22,
                   height: 22,
-                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2.5,
+                  ),
                 )
               : const Text('Simpan Stok Keluar'),
         ),
@@ -134,7 +144,11 @@ class _StockOutScreenState extends State<StockOutScreen> {
                   CircleAvatar(
                     backgroundColor: AppColors.stockOut,
                     radius: 20,
-                    child: Icon(Icons.arrow_upward_rounded, color: Colors.white, size: 22),
+                    child: Icon(
+                      Icons.arrow_upward_rounded,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                   ),
                   SizedBox(width: 14),
                   Expanded(
@@ -151,7 +165,10 @@ class _StockOutScreenState extends State<StockOutScreen> {
                         ),
                         Text(
                           'Jumlah stok akan berkurang secara otomatis setelah disimpan.',
-                          style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -164,27 +181,42 @@ class _StockOutScreenState extends State<StockOutScreen> {
             // Select Product Dropdown
             const Text(
               'Pilih Produk',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
-            DropdownButtonFormField<ProductItem>(
-              value: _selectedProduct,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.inventory_2_outlined, color: AppColors.textMuted),
-              ),
-              items: MockData.products.map((p) {
-                return DropdownMenuItem(
-                  value: p,
-                  child: Text('${p.name} (${p.sku})', overflow: TextOverflow.ellipsis),
+            Selector<ProductProvider, List<Product>>(
+              selector: (_, p) => p.products,
+              builder: (_, products, _) {
+                return DropdownButtonFormField<Product>(
+                  value: _selectedProduct,
+                  isExpanded: true,
+                  decoration: const InputDecoration(
+                    prefixIcon: Icon(
+                      Icons.inventory_2_outlined,
+                      color: AppColors.textMuted,
+                    ),
+                  ),
+                  items: products.map((p) {
+                    return DropdownMenuItem(
+                      value: p,
+                      child: Text(
+                        '${p.name} (${p.sku})',
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedProduct = val;
+                      _quantity = 1;
+                      _qtyController.text = '1';
+                    });
+                  },
                 );
-              }).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _selectedProduct = val;
-                  _quantity = 1;
-                  _qtyController.text = '1';
-                });
               },
             ),
             const SizedBox(height: 16),
@@ -200,22 +232,25 @@ class _StockOutScreenState extends State<StockOutScreen> {
                 ),
                 child: Row(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(10),
-                      child: Image.network(
-                        _selectedProduct!.imageUrl,
-                        width: 50,
-                        height: 50,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(
-                          width: 50,
-                          height: 50,
-                          color: AppColors.inputBg,
-                          child: const Icon(Icons.inventory_2_outlined, color: AppColors.textMuted),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
+                    // ClipRRect(
+                    //   borderRadius: BorderRadius.circular(10),
+                    //   child: Image.network(
+                    //     _selectedProduct!.imageUrl,
+                    //     width: 50,
+                    //     height: 50,
+                    //     fit: BoxFit.cover,
+                    //     errorBuilder: (_, __, ___) => Container(
+                    //       width: 50,
+                    //       height: 50,
+                    //       color: AppColors.inputBg,
+                    //       child: const Icon(
+                    //         Icons.inventory_2_outlined,
+                    //         color: AppColors.textMuted,
+                    //       ),
+                    //     ),
+                    //   ),
+                    // ),
+                    // const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -229,11 +264,13 @@ class _StockOutScreenState extends State<StockOutScreen> {
                             ),
                           ),
                           Text(
-                            'Tersedia: ${_selectedProduct!.stock} ${_selectedProduct!.unit}',
+                            'Tersedia: ${_selectedProduct!.currentStock} ${_selectedProduct!.unit}',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: _selectedProduct!.isLowStock ? AppColors.stockOut : AppColors.primary,
+                              color: _selectedProduct!.isLowStock
+                                  ? AppColors.stockOut
+                                  : AppColors.primary,
                             ),
                           ),
                         ],
@@ -248,15 +285,24 @@ class _StockOutScreenState extends State<StockOutScreen> {
             // Reason / Category Dropdown
             const Text(
               'Alasan Stok Keluar',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             DropdownButtonFormField<String>(
               value: _reasonType,
               decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.list_alt_rounded, color: AppColors.textMuted),
+                prefixIcon: Icon(
+                  Icons.list_alt_rounded,
+                  color: AppColors.textMuted,
+                ),
               ),
-              items: _reasons.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+              items: _reasons
+                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                  .toList(),
               onChanged: (val) {
                 if (val != null) setState(() => _reasonType = val);
               },
@@ -266,7 +312,11 @@ class _StockOutScreenState extends State<StockOutScreen> {
             // Quantity Counter Row
             const Text(
               'Jumlah Keluar',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 8),
             Row(
@@ -281,7 +331,10 @@ class _StockOutScreenState extends State<StockOutScreen> {
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: const Icon(Icons.remove_rounded, color: AppColors.textPrimary),
+                    child: const Icon(
+                      Icons.remove_rounded,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -290,10 +343,15 @@ class _StockOutScreenState extends State<StockOutScreen> {
                     controller: _qtyController,
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                     onChanged: (val) {
                       final n = int.tryParse(val);
-                      if (n != null && n > 0 && n <= (_selectedProduct?.stock ?? 999)) {
+                      if (n != null &&
+                          n > 0 &&
+                          n <= (_selectedProduct?.currentStock ?? 999)) {
                         _quantity = n;
                       }
                     },
@@ -311,9 +369,14 @@ class _StockOutScreenState extends State<StockOutScreen> {
                     decoration: BoxDecoration(
                       color: AppColors.stockOutBg,
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.stockOut.withOpacity(0.5)),
+                      border: Border.all(
+                        color: AppColors.stockOut.withOpacity(0.5),
+                      ),
                     ),
-                    child: const Icon(Icons.add_rounded, color: AppColors.stockOut),
+                    child: const Icon(
+                      Icons.add_rounded,
+                      color: AppColors.stockOut,
+                    ),
                   ),
                 ),
               ],
@@ -323,14 +386,21 @@ class _StockOutScreenState extends State<StockOutScreen> {
             // Date Picker Field
             const Text(
               'Tanggal & Waktu Transaksi',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             TextField(
               controller: _dateController,
               readOnly: true,
               decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.calendar_today_rounded, color: AppColors.textMuted),
+                prefixIcon: Icon(
+                  Icons.calendar_today_rounded,
+                  color: AppColors.textMuted,
+                ),
               ),
             ),
             const SizedBox(height: 16),
@@ -338,7 +408,11 @@ class _StockOutScreenState extends State<StockOutScreen> {
             // Notes / Customer Input
             const Text(
               'Catatan / Keterangan',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 6),
             TextField(

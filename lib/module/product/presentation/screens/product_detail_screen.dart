@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../models/mock_data.dart';
 import '../../../../core/utils/smooth_page_route.dart';
 import '../../../../screens/stock_in_screen.dart';
 import '../../../../screens/stock_out_screen.dart';
 import 'add_edit_product_screen.dart';
 
 class ProductDetailScreen extends StatelessWidget {
-  final ProductItem product;
+  final Product product;
 
   const ProductDetailScreen({super.key, required this.product});
 
@@ -87,37 +87,37 @@ class ProductDetailScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Product Hero Image Container
-            Center(
-              child: Container(
-                width: double.infinity,
-                height: 220,
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.border),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.network(
-                    product.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.inventory_2_outlined,
-                      size: 80,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
+            // Center(
+            //   child: Container(
+            //     width: double.infinity,
+            //     height: 220,
+            //     decoration: BoxDecoration(
+            //       color: AppColors.surface,
+            //       borderRadius: BorderRadius.circular(20),
+            //       border: Border.all(color: AppColors.border),
+            //       boxShadow: [
+            //         BoxShadow(
+            //           color: Colors.black.withOpacity(0.04),
+            //           blurRadius: 12,
+            //           offset: const Offset(0, 4),
+            //         ),
+            //       ],
+            //     ),
+            //     child: ClipRRect(
+            //       borderRadius: BorderRadius.circular(20),
+            //       child: Image.network(
+            //         product.imageUrl,
+            //         fit: BoxFit.cover,
+            //         errorBuilder: (_, __, ___) => const Icon(
+            //           Icons.inventory_2_outlined,
+            //           size: 80,
+            //           color: AppColors.textMuted,
+            //         ),
+            //       ),
+            //     ),
+            //   ),
+            // ),
+            // const SizedBox(height: 20),
 
             // Category & Low Stock Tag Row
             Row(
@@ -129,7 +129,7 @@ class ProductDetailScreen extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    product.category,
+                    product.categoryName,
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
@@ -205,7 +205,7 @@ class ProductDetailScreen extends StatelessWidget {
                         textBaseline: TextBaseline.alphabetic,
                         children: [
                           Text(
-                            '${product.stock}',
+                            '${product.currentStock}',
                             style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.bold,
@@ -237,7 +237,7 @@ class ProductDetailScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '${product.minStock} ${product.unit}',
+                        '${product.minimumStock} ${product.unit}',
                         style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -274,7 +274,7 @@ class ProductDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Rp ${product.buyPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                          'Rp ${product.purchasePrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -306,7 +306,7 @@ class ProductDetailScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          'Rp ${product.sellPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
+                          'Rp ${product.recommendedSellingPrice.toInt().toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
