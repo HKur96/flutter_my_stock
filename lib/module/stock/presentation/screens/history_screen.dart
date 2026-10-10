@@ -439,29 +439,6 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 );
               },
             ),
-
-            // Footer Audit Log Notice
-            Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.verified_user_outlined,
-                    size: 14,
-                    color: AppColors.textMuted,
-                  ),
-                  const SizedBox(width: 6),
-                  const Text(
-                    'Audit log permanen • Terenkripsi lokal per sesi kasir',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ],
         ),
       ),

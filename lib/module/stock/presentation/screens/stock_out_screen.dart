@@ -595,6 +595,38 @@ class _StockOutScreenState extends State<StockOutScreen> {
     int currentStock,
     String unit,
   ) {
+    if (selectedProduct == null) {
+      return AppCard(
+        onTap: () => _openProductSearch(products),
+        padding: const EdgeInsets.all(20),
+        child: Row(
+          children: [
+            const Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Pilih Produk Stok Keluar',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Ketuk untuk mencari produk yang akan di-stock keluar',
+                    style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: AppColors.textMuted),
+          ],
+        ),
+      );
+    }
+
     return AppCard(
       onTap: () => _openProductSearch(products),
       padding: const EdgeInsets.all(14),
@@ -604,30 +636,28 @@ class _StockOutScreenState extends State<StockOutScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (selectedProduct != null) ...[
-                  Row(
-                    children: [
-                      Text(
-                        selectedProduct.categoryName,
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textMuted,
-                        ),
+                Row(
+                  children: [
+                    Text(
+                      selectedProduct.categoryName,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        'SKU: ${selectedProduct.sku}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: AppColors.textMuted,
-                        ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      'SKU: ${selectedProduct.sku}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 2),
                 Text(
-                  selectedProduct?.name ?? 'Pilih Produk',
+                  selectedProduct.name,
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -636,17 +666,15 @@ class _StockOutScreenState extends State<StockOutScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (selectedProduct != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Stok saat ini: $currentStock $unit',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                    ),
+                const SizedBox(height: 4),
+                Text(
+                  'Stok saat ini: $currentStock $unit',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textSecondary,
                   ),
-                ],
+                ),
               ],
             ),
           ),
