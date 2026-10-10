@@ -21,7 +21,10 @@ class StockRepositoryImpl implements StockRepository {
       final int from = (page - 1) * limit;
       final int to = from + limit - 1;
 
-      var query = _client.from('product_logs').select();
+      var query = _client.from('product_logs').select('''
+        *,
+        products(unit)
+      ''');
 
       // 1. Filter berdasarkan productId (jika ada)
       if (productId != null && productId.trim().isNotEmpty) {
@@ -46,7 +49,9 @@ class StockRepositoryImpl implements StockRepository {
       // 3. Terapkan Search Keyword (jika ada)
       if (searchQuery != null && searchQuery.trim().isNotEmpty) {
         final q = searchQuery.trim();
-        query = query.or('product_name.ilike.%$q%,pic.ilike.%$q%,note.ilike.%$q%');
+        query = query.or(
+          'product_name.ilike.%$q%,pic.ilike.%$q%,note.ilike.%$q%',
+        );
       }
 
       // 4. Urutkan berdasarkan waktu terbaru, lalu terapkan range pagination

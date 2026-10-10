@@ -5,6 +5,7 @@ class ProductLog {
   final String id;
   final String productId;
   final String productName;
+  final String unit;
   final ProductLogType productLogType;
   final String pic;
   final String? note;
@@ -16,6 +17,7 @@ class ProductLog {
     required this.id,
     required this.productId,
     required this.productName,
+    required this.unit,
     required this.productLogType,
     required this.pic,
     this.note,
@@ -28,8 +30,7 @@ class ProductLog {
 
   String get newStock =>
       (newData['current_stock'] ?? oldData['current_stock'] ?? 0).toString();
-  String get sku =>
-      (newData['sku'] ?? oldData['sku'] ?? productId).toString();
+  String get sku => (newData['sku'] ?? oldData['sku'] ?? productId).toString();
 
   int get stockDifferent {
     final oldStock = oldData['current_stock'] as int? ?? 0;
@@ -52,6 +53,7 @@ class ProductLog {
       id: id ?? this.id,
       productId: productId ?? this.productId,
       productName: productName ?? this.productName,
+      unit: unit,
       productLogType: productLogType ?? this.productLogType,
       pic: pic ?? this.pic,
       note: note ?? this.note,

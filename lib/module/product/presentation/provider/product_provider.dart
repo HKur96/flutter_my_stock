@@ -3,6 +3,7 @@ import 'package:flutter_catat_stok/core/config/global.dart';
 import 'package:flutter_catat_stok/core/theme/app_theme.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/product_summary.dart';
 import 'package:flutter_catat_stok/module/product/domain/repository/product_repository.dart';
 
 class ProductProvider with ChangeNotifier {
@@ -19,22 +20,40 @@ class ProductProvider with ChangeNotifier {
 
   List<CategoryItem> _categories = [];
   List<Product> _products = [];
+  List<ProductSummary> _productsSummary = [];
   bool _isLoading = false;
   bool _isLoadingProduct = false;
+  bool _isLoadingProductSummary = false;
+  bool _isLoadingMoreProduct = false;
+  bool _hasMoreProduct = true;
+  int _currentProductPage = 1;
 
   List<CategoryItem> get categories => _categories;
   List<Product> get products => _products;
+  List<ProductSummary> get productsSummary => _productsSummary;
   bool get isLoading => _isLoading;
   bool get isLoadingProduct => _isLoadingProduct;
+  bool get isLoadingProductSummary => _isLoadingProductSummary;
+  bool get isLoadingMoreProduct => _isLoadingMoreProduct;
+  bool get hasMoreProduct => _hasMoreProduct;
+  int get currentProductPage => _currentProductPage;
+
+  // Products
+  double get totalValue => _productsSummary.fold(
+    0.0,
+    (sum, item) => sum + (item.recommendedSellingPrice * item.currentStock),
+  );
+  int get totalItemsCount =>
+      _productsSummary.fold(0, (sum, item) => sum + item.currentStock);
 
   List<String> get categoriesChipFilter => [
     'Semua',
     ...categories.map((x) => x.name),
   ];
 
-  List<Product> get lowStockItems {
+  List<ProductSummary> get lowStockItems {
     if (_isLoadingProduct) return [];
-    return _products.where((x) => x.isLowStock).toList();
+    return _productsSummary.where((x) => x.isLowStock).toList();
   }
 
   Future<void> getCategories() async {
@@ -127,19 +146,62 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
-  Future<List<Product>> getProducts() async {
-    _isLoadingProduct = true;
+  Future<List<Product>> getProducts({
+    int page = 1,
+    int limit = 10,
+    String? searchQuery,
+    String? categoryId,
+    bool isRefresh = false,
+  }) async {
+    if (_isLoadingProduct || _isLoadingMoreProduct) return _products;
+
+    if (isRefresh || page == 1) {
+      _isLoadingProduct = true;
+      _currentProductPage = 1;
+      _hasMoreProduct = true;
+    } else {
+      _isLoadingMoreProduct = true;
+    }
     notifyListeners();
 
     try {
-      final response = await _productRepository.getProducts();
-      _products = response;
+      final response = await _productRepository.getProducts(
+        page: page,
+        limit: limit,
+        searchQuery: searchQuery,
+        categoryId: categoryId,
+      );
+
+      if (isRefresh || page == 1) {
+        _products = response;
+      } else {
+        _products.addAll(response);
+      }
+
+      _currentProductPage = page;
+      _hasMoreProduct = response.length >= limit;
+      return _products;
+    } catch (e) {
+      return [];
+    } finally {
+      _isLoadingProduct = false;
+      _isLoadingMoreProduct = false;
+      notifyListeners();
+    }
+  }
+
+  Future<List<ProductSummary>> getProductsSummary() async {
+    _isLoadingProductSummary = true;
+    notifyListeners();
+    try {
+      final response = await _productRepository.getProductsSummary();
+      _productsSummary = response;
       notifyListeners();
       return response;
     } catch (e) {
       return [];
     } finally {
-      _isLoadingProduct = false;
+      _isLoadingProductSummary = false;
       notifyListeners();
     }
   }
@@ -210,7 +272,6 @@ class ProductProvider with ChangeNotifier {
     notifyListeners();
     try {
       final res = await _productRepository.deleteProduct(id);
-      print('heyy $res');
       if (!res) {
         throw 'Tidak dapat menghapus produk';
       }
@@ -222,8 +283,7 @@ class ProductProvider with ChangeNotifier {
         gNavigatorKey.currentContext!,
       ).showSnackBar(SnackBar(content: Text('Produk berhasil dihapus')));
       return true;
-    } catch (e, s) {
-      print('bjirr $e\n$s');
+    } catch (e) {
       showFlashError('Tidak dapat menghapus produk');
       return false;
     } finally {

@@ -2,8 +2,10 @@ import 'package:flutter_catat_stok/core/services/local_storage_service.dart';
 import 'package:flutter_catat_stok/core/services/supabase_service.dart';
 import 'package:flutter_catat_stok/module/product/data/models/category_model.dart';
 import 'package:flutter_catat_stok/module/product/data/models/product_model.dart';
+import 'package:flutter_catat_stok/module/product/data/models/product_summary_model.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/product_summary.dart';
 import 'package:flutter_catat_stok/module/product/domain/repository/product_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -149,7 +151,7 @@ class ProductRepositoryImpl implements ProductRepository {
       // untuk menghindari konflik dengan trigger DB pada product_logs.
       await _client.from('products').update({'is_active': false}).eq('id', id);
       return true;
-    } on PostgrestException catch (e) {
+    } on PostgrestException catch (_) {
       return false;
     } catch (e) {
       return false;
@@ -157,11 +159,17 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   @override
-  Future<List<Product>> getProducts() async {
+  Future<List<Product>> getProducts({
+    int page = 1,
+    int limit = 10,
+    String? searchQuery,
+    String? categoryId,
+  }) async {
     try {
-      final response = await _client
-          .from('products')
-          .select('''
+      final int from = (page - 1) * limit;
+      final int to = from + limit - 1;
+
+      var query = _client.from('products').select('''
               id,
               name,
               sku,
@@ -178,9 +186,24 @@ class ProductRepositoryImpl implements ProductRepository {
                 id, 
                 name
               )
-      ''')
+      ''');
+
+      // Filter by category_id if specified
+      if (categoryId != null && categoryId.isNotEmpty) {
+        query = query.eq('category_id', categoryId);
+      }
+
+      // Filter by search query (name or sku)
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim();
+        query = query.or('name.ilike.%$q%,sku.ilike.%$q%');
+      }
+
+      final response = await query
           .eq('is_active', true)
-          .order('current_stock', ascending: true);
+          .order('current_stock', ascending: true)
+          .range(from, to);
+
       return (response as List)
           .map<Product>((x) => ProductModel.fromJson(x))
           .toList();
@@ -218,6 +241,29 @@ class ProductRepositoryImpl implements ProductRepository {
       return ProductModel.fromJson(response);
     } catch (e) {
       return null;
+    }
+  }
+
+  @override
+  Future<List<ProductSummary>> getProductsSummary() async {
+    try {
+      // just to check product summary
+      final res = await _client
+          .from('products')
+          .select("""
+              id,
+              name,
+              current_stock,
+              minimum_stock,
+              recommended_selling_price
+      """)
+          .eq('is_active', true);
+
+      return (res as List)
+          .map<ProductSummary>((x) => ProductSummaryModel.fromJson(x))
+          .toList();
+    } catch (e) {
+      return [];
     }
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/product_summary.dart';
 
 abstract class ProductRepository {
   Future<List<CategoryItem>> getCategories();
@@ -14,7 +15,14 @@ abstract class ProductRepository {
 
   Future<bool> deleteCategory(String id);
 
-  Future<List<Product>> getProducts();
+  Future<List<Product>> getProducts({
+    int page = 1,
+    int limit = 10,
+    String? searchQuery,
+    String? categoryId,
+  });
+
+  Future<List<ProductSummary>> getProductsSummary();
 
   Future<Product?> addProduct({required Product product});
 

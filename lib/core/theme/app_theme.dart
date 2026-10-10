@@ -7,16 +7,16 @@ class AppColors {
   static const Color primaryAccent = Color(0xFF005C55); // Primary Container
   static const Color primaryLight = Color(0xFFA7F0E6); // Light Mint Tint
   static const Color primaryDark = Color(0xFF00201D);
-  
+
   // Stock Mutations
   static const Color stockIn = Color(0xFF006D30); // Emerald Green
   static const Color stockInBg = Color(0xFFE8F8ED); // Emerald Light Subtlety
   static const Color stockInBorder = Color(0xFF98F4A7);
-  
+
   static const Color stockOut = Color(0xFFA50710); // Rich Crimson Red
   static const Color stockOutBg = Color(0xFFFDE8E8); // Crimson Light Subtlety
   static const Color stockOutBorder = Color(0xFFFFDAD6);
-  
+
   // States & Warnings
   static const Color warning = Color(0xFFB45309); // Amber
   static const Color warningBg = Color(0xFFFEF3C7);
@@ -24,7 +24,7 @@ class AppColors {
 
   static const Color info = Color(0xFF005323);
   static const Color infoBg = Color(0xFFE8F8ED);
-  
+
   // Neutral Surfaces & Backgrounds (Warm Canvas)
   static const Color background = Color(0xFFFBF9F2); // Warm Utilitarian Canvas
   static const Color surface = Color(0xFFFBF9F2);
@@ -32,7 +32,7 @@ class AppColors {
   static const Color surfaceContainer = Color(0xFFEFEEE7);
   static const Color surfaceContainerHigh = Color(0xFFEAE8E1);
   static const Color surfaceSubtle = Color(0xFFF5F4ED);
-  
+
   // Typography
   static const Color textPrimary = Color(0xFF1B1C18); // Charcoal Slate
   static const Color textSecondary = Color(0xFF3F4947);
@@ -43,6 +43,9 @@ class AppColors {
   static const Color border = Color(0xFFE4E2DC); // Hairline border
   static const Color borderSubtle = Color(0xFFEFEEE7);
   static const Color inputBg = Color(0xFFFFFFFF);
+
+  static Color shimmerBaseColor = Colors.grey.shade300;
+  static Color shimmerHighlightColor = Colors.grey.shade100;
 }
 
 class AppTheme {
@@ -84,7 +87,10 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: AppColors.surfaceCard,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 14,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppColors.border),

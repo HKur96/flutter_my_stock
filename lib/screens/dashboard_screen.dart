@@ -3,10 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/extensions.dart';
 import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
+import 'package:flutter_catat_stok/core/widgets/app_shimmer.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
-import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
-import 'package:flutter_catat_stok/module/stock/domain/models/product_log.dart';
 import 'package:flutter_catat_stok/module/stock/presentation/provider/stock_provider.dart';
 import 'package:flutter_catat_stok/module/stock/presentation/screens/stock_opname_screen.dart';
 import 'package:provider/provider.dart';
@@ -39,7 +38,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadDatas() async {
     await Future.wait([
       context.read<ProductProvider>().getCategories(),
-      context.read<ProductProvider>().getProducts(),
+      context.read<ProductProvider>().getProductsSummary(),
       context.read<StockProvider>().getProductLogs(
         page: 1,
         limit: 5,
@@ -123,18 +122,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildStockValueCard() {
-    return Selector<ProductProvider, List<Product>>(
-      selector: (_, p) => p.products,
-      builder: (context, products, _) {
-        final double totalValue = products.fold(
-          0.0,
-          (sum, item) =>
-              sum + (item.recommendedSellingPrice * item.currentStock),
-        );
-        final int totalItemsCount = products.fold(
-          0,
-          (sum, item) => sum + item.currentStock,
-        );
+    return Consumer<ProductProvider>(
+      builder: (_, provider, __) {
+        final isLoading = provider.isLoadingProductSummary;
 
         return AppCard(
           padding: const EdgeInsets.all(16),
@@ -151,15 +141,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
-                CurrencyFormatter.format(totalValue),
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                  letterSpacing: -0.3,
+              if (isLoading) ...[
+                AppShimmer.rectangle(width: double.infinity, height: 20),
+              ] else ...[
+                Text(
+                  CurrencyFormatter.format(provider.totalValue),
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.3,
+                  ),
                 ),
-              ),
+              ],
               const SizedBox(height: 12),
               const Divider(height: 1, color: AppColors.borderSubtle),
               const SizedBox(height: 12),
@@ -178,14 +172,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           ),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          '${products.length}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textPrimary,
+                        if (isLoading) ...[
+                          AppShimmer.rectangle(width: 100, height: 20),
+                        ] else ...[
+                          Text(
+                            '${provider.products.length}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
-                        ),
+                        ],
                       ],
                     ),
                   ),
@@ -209,14 +207,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            '$totalItemsCount pcs',
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
+                          if (isLoading) ...[
+                            AppShimmer.rectangle(width: 100, height: 20),
+                          ] else ...[
+                            Text(
+                              '${provider.totalItemsCount} pcs',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),
@@ -302,9 +304,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildLowStockSection() {
-    return Selector<ProductProvider, List<Product>>(
-      selector: (_, p) => p.lowStockItems,
-      builder: (context, lowStockItems, _) {
+    return Consumer<ProductProvider>(
+      builder: (_, provider, _) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -312,7 +313,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Stok Menipis (${lowStockItems.length})',
+                  'Stok Menipis (${provider.lowStockItems.length})',
                   style: const TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
@@ -322,8 +323,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 GestureDetector(
                   onTap: () {
-                    if (widget.onNavigateToTab != null)
+                    if (widget.onNavigateToTab != null) {
                       widget.onNavigateToTab!(1);
+                    }
                   },
                   child: const Text(
                     'Lihat semua',
@@ -337,7 +339,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
             const SizedBox(height: 10),
-            if (lowStockItems.isEmpty)
+            if (provider.isLoadingProductSummary) ...[
+              AppCard(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: 3,
+                  separatorBuilder: (_, __) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: const Divider(
+                      height: 1,
+                      color: AppColors.borderSubtle,
+                    ),
+                  ),
+                  itemBuilder: (_, index) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        AppShimmer.rectangle(width: 170, height: 18),
+
+                        AppShimmer.rectangle(width: 100, height: 18),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ] else if (provider.lowStockItems.isEmpty)
               AppCard(
                 padding: const EdgeInsets.all(16),
                 child: const Center(
@@ -354,11 +381,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: lowStockItems.length,
+                  itemCount: provider.lowStockItems.length,
                   separatorBuilder: (_, __) =>
                       const Divider(height: 1, color: AppColors.borderSubtle),
                   itemBuilder: (context, index) {
-                    final item = lowStockItems[index];
+                    final item = provider.lowStockItems[index];
                     return Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 14,
@@ -381,14 +408,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  item.categoryName,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textMuted,
-                                  ),
-                                ),
+                                // const SizedBox(height: 2),
+                                // Text(
+                                //   item.categoryName,
+                                //   style: const TextStyle(
+                                //     fontSize: 12,
+                                //     color: AppColors.textMuted,
+                                //   ),
+                                // ),
                               ],
                             ),
                           ),
@@ -427,9 +454,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildRecentActivitiesSection() {
-    return Selector<StockProvider, List<ProductLog>>(
-      selector: (_, p) => p.productLogs,
-      builder: (context, logs, _) {
+    return Consumer<StockProvider>(
+      builder: (context, provider, _) {
+        final isLoading = provider.isLoading;
+
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -445,24 +473,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     letterSpacing: -0.2,
                   ),
                 ),
-                GestureDetector(
-                  onTap: () {
-                    if (widget.onNavigateToTab != null)
-                      widget.onNavigateToTab!(2);
-                  },
-                  child: const Text(
-                    'Lihat semua',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primaryAccent,
+                if (isLoading)
+                  AppShimmer.rectangle(width: 100, height: 18)
+                else
+                  GestureDetector(
+                    onTap: () {
+                      if (widget.onNavigateToTab != null) {
+                        widget.onNavigateToTab!(2);
+                      }
+                    },
+                    child: const Text(
+                      'Lihat semua',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primaryAccent,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 10),
-            if (logs.isEmpty)
+            if (isLoading)
+              AppCard(
+                padding: const EdgeInsets.all(16),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: 3,
+                  separatorBuilder: (_, __) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: const Divider(
+                      height: 1,
+                      color: AppColors.borderSubtle,
+                    ),
+                  ),
+                  itemBuilder: (_, index) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        AppShimmer.circle(width: 32, height: 32),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppShimmer.rectangle(width: 170, height: 14),
+                              const SizedBox(height: 6),
+                              AppShimmer.rectangle(width: 100, height: 12),
+                            ],
+                          ),
+                        ),
+                        AppShimmer.rectangle(width: 100, height: 14),
+                      ],
+                    );
+                  },
+                ),
+              )
+            else if (provider.productLogs.isEmpty)
               AppCard(
                 padding: const EdgeInsets.all(16),
                 child: const Center(
@@ -479,11 +547,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: logs.length,
+                  itemCount: provider.productLogs.length,
                   separatorBuilder: (_, __) =>
                       const Divider(height: 1, color: AppColors.borderSubtle),
                   itemBuilder: (context, index) {
-                    final item = logs[index];
+                    final item = provider.productLogs[index];
                     final isIn = item.productLogType == ProductLogType.stockIn;
                     final isOut =
                         item.productLogType == ProductLogType.stockOut;
@@ -505,9 +573,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         : Icons.fact_check_outlined;
 
                     final String qtyText = isIn
-                        ? '+${item.stockDifferent} pcs'
+                        ? '+${item.stockDifferent} ${item.unit}'
                         : isOut
-                        ? '-${item.stockDifferent} pcs'
+                        ? '${item.stockDifferent} ${item.unit}'
                         : '${item.stockDifferent > 0 ? "+" : ""}${item.stockDifferent} pcs';
 
                     return Padding(

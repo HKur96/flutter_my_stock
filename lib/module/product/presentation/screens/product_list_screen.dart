@@ -1,10 +1,12 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
 import 'package:flutter_catat_stok/core/widgets/app_text_field.dart';
 import 'package:flutter_catat_stok/core/widgets/empty_state_widget.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
 import 'package:provider/provider.dart';
@@ -23,13 +25,69 @@ class ProductListScreen extends StatefulWidget {
 
 class _ProductListScreenState extends State<ProductListScreen> {
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   String _selectedCategory = 'Semua';
-  String _searchQuery = '';
+  Timer? _debounceTimer;
 
   late final user = context.watch<AuthProvider>().user;
 
+  void _loadProducts({int page = 1, bool isRefresh = false}) {
+    final provider = context.read<ProductProvider>();
+    String? catId;
+    if (_selectedCategory != 'Semua') {
+      CategoryItem? matchedCat;
+      for (var c in provider.categories) {
+        if (c.name == _selectedCategory) {
+          matchedCat = c;
+          break;
+        }
+      }
+      catId = matchedCat?.id;
+    }
+
+    provider.getProducts(
+      page: page,
+      limit: 10,
+      searchQuery: _searchController.text,
+      categoryId: catId,
+      isRefresh: isRefresh,
+    );
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      final provider = context.read<ProductProvider>();
+      if (provider.hasMoreProduct &&
+          !provider.isLoadingMoreProduct &&
+          !provider.isLoadingProduct) {
+        _loadProducts(page: provider.currentProductPage + 1);
+      }
+    }
+  }
+
+  void _onSearchChanged(String val) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 400), () {
+      _loadProducts(page: 1, isRefresh: true);
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _scrollController.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProductProvider>().getCategories();
+      _loadProducts(page: 1, isRefresh: true);
+    });
+  }
+
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -73,19 +131,19 @@ class _ProductListScreenState extends State<ProductListScreen> {
           Expanded(
             child: AppTextField(
               controller: _searchController,
-              onChanged: (val) => setState(() => _searchQuery = val),
+              onChanged: _onSearchChanged,
               hintText: 'Cari nama atau SKU',
               prefixIcon: const Icon(
                 Icons.search_rounded,
                 size: 20,
                 color: AppColors.textMuted,
               ),
-              suffixIcon: _searchQuery.isNotEmpty
+              suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.close_rounded, size: 16),
                       onPressed: () {
                         _searchController.clear();
-                        setState(() => _searchQuery = '');
+                        _loadProducts(page: 1, isRefresh: true);
                       },
                     )
                   : null,
@@ -150,7 +208,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ),
                 visualDensity: VisualDensity.compact,
                 onSelected: (selected) {
-                  if (selected) setState(() => _selectedCategory = cat);
+                  if (selected) {
+                    setState(() => _selectedCategory = cat);
+                    _loadProducts(page: 1, isRefresh: true);
+                  }
                 },
               );
             },
@@ -255,33 +316,40 @@ class _ProductListScreenState extends State<ProductListScreen> {
   }
 
   Widget _buildProductList() {
-    return Selector<ProductProvider, List<Product>>(
-      selector: (_, p) => p.products,
-      builder: (context, products, _) {
-        final filtered = products.where((p) {
-          final matchesCat =
-              _selectedCategory == 'Semua' ||
-              p.categoryName == _selectedCategory;
-          final matchesSearch =
-              _searchQuery.isEmpty ||
-              p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              p.sku.toLowerCase().contains(_searchQuery.toLowerCase());
-          return matchesCat && matchesSearch;
-        }).toList();
+    return Expanded(
+      child: Consumer<ProductProvider>(
+        builder: (context, productProvider, _) {
+          final products = productProvider.products;
+          final isLoading = productProvider.isLoadingProduct;
+          final isLoadingMore = productProvider.isLoadingMoreProduct;
 
-        if (filtered.isEmpty) {
-          return const Expanded(
-            child: EmptyStateWidget(
-              icon: Icons.inventory_2_outlined,
-              title: 'Produk tidak ditemukan',
-              subtitle: 'Coba ubah kata kunci pencarian atau filter kategori.',
-            ),
-          );
-        }
+          if (isLoading && products.isEmpty) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
 
-        return Expanded(
-          child: RefreshIndicator(
-            onRefresh: () => context.read<ProductProvider>().getProducts(),
+          if (products.isEmpty) {
+            return RefreshIndicator(
+              onRefresh: () async => _loadProducts(page: 1, isRefresh: true),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Container(
+                  height: 300,
+                  alignment: Alignment.center,
+                  child: const EmptyStateWidget(
+                    icon: Icons.inventory_2_outlined,
+                    title: 'Produk tidak ditemukan',
+                    subtitle:
+                        'Coba ubah kata kunci pencarian atau filter kategori.',
+                  ),
+                ),
+              ),
+            );
+          }
+
+          return RefreshIndicator(
+            onRefresh: () async => _loadProducts(page: 1, isRefresh: true),
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: AppCard(
@@ -289,11 +357,27 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 borderRadius: 16,
                 child: ListView.separated(
                   key: const PageStorageKey('product_list'),
-                  itemCount: filtered.length,
+                  controller: _scrollController,
+                  itemCount: products.length + (isLoadingMore ? 1 : 0),
                   separatorBuilder: (_, __) =>
                       const Divider(height: 1, color: AppColors.borderSubtle),
                   itemBuilder: (context, index) {
-                    final item = filtered[index];
+                    if (index == products.length) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        child: Center(
+                          child: SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final item = products[index];
                     return InkWell(
                       onTap: () {
                         Navigator.push(
@@ -307,7 +391,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         top: index == 0
                             ? const Radius.circular(16)
                             : Radius.zero,
-                        bottom: index == filtered.length - 1
+                        bottom: index == products.length - 1
                             ? const Radius.circular(16)
                             : Radius.zero,
                       ),
@@ -394,9 +478,9 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 

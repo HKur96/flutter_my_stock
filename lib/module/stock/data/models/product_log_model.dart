@@ -12,6 +12,7 @@ class ProductLogModel extends ProductLog {
     required super.oldData,
     required super.newData,
     required super.createdAt,
+    required super.unit,
   });
 
   factory ProductLogModel.fromJson(Map<String, dynamic> json) {
@@ -31,6 +32,7 @@ class ProductLogModel extends ProductLog {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
+      unit: json['products']['unit'] ?? 'pcs',
     );
   }
 }
