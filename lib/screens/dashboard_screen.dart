@@ -2,17 +2,21 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/extensions.dart';
+import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
-import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
+import 'package:flutter_catat_stok/module/stock/domain/models/product_log.dart';
+import 'package:flutter_catat_stok/module/stock/presentation/provider/stock_provider.dart';
+import 'package:flutter_catat_stok/module/stock/presentation/screens/stock_opname_screen.dart';
 import 'package:provider/provider.dart';
+import '../core/config/enum.dart';
 import '../core/theme/app_theme.dart';
-import '../models/mock_data.dart';
+import '../core/utils/date_formatter.dart';
 import '../core/utils/smooth_page_route.dart';
+import '../core/widgets/app_card.dart';
 import '../module/stock/presentation/screens/stock_in_screen.dart';
 import '../module/stock/presentation/screens/stock_out_screen.dart';
-import '../module/product/presentation/screens/add_edit_product_screen.dart';
 import '../module/product/presentation/screens/manage_category_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -34,14 +38,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadDatas() async {
-    await context.read<ProductProvider>().getCategories();
-    await context.read<ProductProvider>().getProducts();
+    await Future.wait([
+      context.read<ProductProvider>().getCategories(),
+      context.read<ProductProvider>().getProducts(),
+      context.read<StockProvider>().getProductLogs(),
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
-    final recentTrx = MockData.transactions;
-
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -49,406 +54,29 @@ class _DashboardScreenState extends State<DashboardScreen> {
           onRefresh: _loadDatas,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Top App Header
-                _buildAppHeader(),
+                // Top App Header (Title "Beranda" & Profile Avatar)
+                _buildHeader(),
+                const SizedBox(height: 16),
+
+                // Card Estimasi Nilai Stok (Match Stitch 11_beranda)
+                _buildStockValueCard(),
+                const SizedBox(height: 16),
+
+                // Action Buttons Row (Stok Masuk, Stok Keluar, Opname)
+                _buildActionButtonsRow(),
                 const SizedBox(height: 20),
 
-                // KPI Overview Cards Grid
-                GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                  childAspectRatio: 1.5,
-                  children: [
-                    Selector<ProductProvider, List<Product>>(
-                      selector: (_, provider) => provider.products,
-                      builder: (context, products, _) {
-                        return _buildKpiCard(
-                          title: 'Total Produk',
-                          value: '${products.length} SKU',
-                          color: AppColors.primary,
-                          bgColor: AppColors.primaryLight,
-                        );
-                      },
-                    ),
-                    Selector<ProductProvider, List<Product>>(
-                      selector: (_, provider) => provider.lowStockItems,
-                      builder: (context, lowStockItems, _) {
-                        return _buildKpiCard(
-                          title: 'Stok Menipis',
-                          value: '${lowStockItems.length} Item',
-                          color: AppColors.warning,
-                          bgColor: AppColors.warningBg,
-                        );
-                      },
-                    ),
-                    Selector<ProductProvider, List<CategoryItem>>(
-                      selector: (_, provider) => provider.categories,
-                      builder: (context, categories, _) {
-                        return _buildKpiCard(
-                          title: 'Total Kategori',
-                          value: '${categories.length} Kategori',
-                          color: Colors.purple,
-                          bgColor: Colors.purple.shade50,
-                        );
-                      },
-                    ),
-                    _buildKpiCard(
-                      title: 'Transaksi Bulan Ini',
-                      value: '${MockData.transactions.length + 18} Trx',
-                      color: AppColors.stockIn,
-                      bgColor: AppColors.stockInBg,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
+                // Stok Menipis Section (Match Stitch 11_beranda)
+                _buildLowStockSection(),
+                const SizedBox(height: 20),
 
-                // Quick Action Buttons
-                const Text(
-                  'Aksi Cepat',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionButton(
-                        context,
-                        title: 'Stok Masuk',
-                        icon: Icons.arrow_downward_rounded,
-                        color: AppColors.stockIn,
-                        bgColor: AppColors.stockInBg,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            SmoothPageRoute(page: const StockInScreen()),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildActionButton(
-                        context,
-                        title: 'Stok Keluar',
-                        icon: Icons.arrow_upward_rounded,
-                        color: AppColors.stockOut,
-                        bgColor: AppColors.stockOutBg,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            SmoothPageRoute(page: const StockOutScreen()),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildActionButton(
-                        context,
-                        title: 'Tambah Produk',
-                        icon: Icons.add_box_outlined,
-                        color: AppColors.primary,
-                        bgColor: AppColors.primaryLight,
-                        onTap: () {
-                          final categories = context
-                              .read<ProductProvider>()
-                              .categories;
-                          if (categories.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Kategori masih kosong. Buat kategori terlebih dahulu.',
-                                ),
-                                backgroundColor: AppColors.warning,
-                              ),
-                            );
-                            Navigator.push(
-                              context,
-                              SmoothPageRoute(
-                                page: const ManageCategoryScreen(),
-                              ),
-                            );
-                          } else {
-                            Navigator.push(
-                              context,
-                              SmoothPageRoute(
-                                page: const AddEditProductScreen(),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _buildActionButton(
-                        context,
-                        title: 'Kategori',
-                        icon: Icons.grid_view_rounded,
-                        color: Colors.purple,
-                        bgColor: Colors.purple.shade50,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            SmoothPageRoute(page: const ManageCategoryScreen()),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Low Stock Alerts Section
-                Selector<ProductProvider, List<Product>>(
-                  selector: (_, provider) => provider.lowStockItems,
-                  builder: (context, lowStockItems, _) {
-                    if (lowStockItems.isEmpty) return const SizedBox.shrink();
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Peringatan Stok Menipis ⚠️',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                if (widget.onNavigateToTab != null) {
-                                  widget.onNavigateToTab!(
-                                    1,
-                                  ); // Go to Products tab
-                                }
-                              },
-                              child: const Text('Lihat Semua'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        ListView.separated(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: lowStockItems.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final item = lowStockItems[index];
-                            return Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: AppColors.warning.withOpacity(0.3),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  // ClipRRect(
-                                  //   borderRadius: BorderRadius.circular(10),
-                                  //   child: Image.network(
-                                  //     item.imageUrl,
-                                  //     width: 44,
-                                  //     height: 44,
-                                  //     fit: BoxFit.cover,
-                                  //     errorBuilder: (_, __, ___) => Container(
-                                  //       width: 44,
-                                  //       height: 44,
-                                  //       color: AppColors.inputBg,
-                                  //       child: const Icon(
-                                  //         Icons.inventory_2_outlined,
-                                  //         color: AppColors.textMuted,
-                                  //       ),
-                                  //     ),
-                                  //   ),
-                                  // ),
-                                  // const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.name,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.bold,
-                                            color: AppColors.textPrimary,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          'Sisa Stok: ${item.currentStock} ${item.unit} (Min. ${item.minimumStock})',
-                                          style: const TextStyle(
-                                            fontSize: 12,
-                                            color: AppColors.stockOut,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        SmoothPageRoute(
-                                          page: StockInScreen(
-                                            initialProduct: item,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.warning,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 8,
-                                      ),
-                                      minimumSize: Size.zero,
-                                      tapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                    ),
-                                    child: const Text(
-                                      '+ Stok',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    );
-                  },
-                ),
-
-                // Recent Activities Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'Riwayat Transaksi Terkini',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        if (widget.onNavigateToTab != null) {
-                          widget.onNavigateToTab!(3); // Go to History tab
-                        }
-                      },
-                      child: const Text('Selengkapnya'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: recentTrx.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (context, index) {
-                    final trx = recentTrx[index];
-                    final isIn = trx.type == 'IN';
-                    return Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: isIn
-                                  ? AppColors.stockInBg
-                                  : AppColors.stockOutBg,
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              isIn
-                                  ? Icons.arrow_downward_rounded
-                                  : Icons.arrow_upward_rounded,
-                              color: isIn
-                                  ? AppColors.stockIn
-                                  : AppColors.stockOut,
-                              size: 20,
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  trx.productName,
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.textPrimary,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                Text(
-                                  trx.date,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.textMuted,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Text(
-                            '${isIn ? "+" : "-"}${trx.qty}',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: isIn
-                                  ? AppColors.stockIn
-                                  : AppColors.stockOut,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                // Aktivitas Terakhir Section (Match Stitch 11_beranda)
+                _buildRecentActivitiesSection(),
+                const SizedBox(height: 16),
               ],
             ),
           ),
@@ -457,168 +85,478 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildKpiCard({
-    required String title,
-    required String value,
-    required Color color,
-    required Color bgColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+  Widget _buildHeader() {
+    final user = context.watch<AuthProvider>().user;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        const Text(
+          'Beranda',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+            letterSpacing: -0.5,
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            title,
+        ),
+        CircleAvatar(
+          radius: 18,
+          backgroundColor: AppColors.primary,
+          child: Text(
+            user?.name.initials ?? 'U',
             style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: AppColors.textSecondary,
-            ),
-          ),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 18,
+              fontSize: 13,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              color: Colors.white,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  Widget _buildActionButton(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required Color color,
-    required Color bgColor,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: BorderRadius.circular(10),
+  Widget _buildStockValueCard() {
+    return Selector<ProductProvider, List<Product>>(
+      selector: (_, p) => p.products,
+      builder: (context, products, _) {
+        final double totalValue = products.fold(
+          0.0,
+          (sum, item) => sum + (item.recommendedSellingPrice * item.currentStock),
+        );
+        final int totalItemsCount = products.fold(
+          0,
+          (sum, item) => sum + item.currentStock,
+        );
+
+        return AppCard(
+          padding: const EdgeInsets.all(16),
+          borderRadius: 16,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Estimasi Nilai Stok',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textMuted,
+                ),
               ),
-              child: Icon(icon, color: color, size: 20),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(
-                title,
+              const SizedBox(height: 4),
+              Text(
+                CurrencyFormatter.format(totalValue),
                 style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
+                  letterSpacing: -0.3,
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAppHeader() {
-    return Consumer<AuthProvider>(
-      builder: (context, provider, _) {
-        return Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(3),
-              decoration: BoxDecoration(
-                color: AppColors.primaryLight,
-                shape: BoxShape.circle,
-                border: Border.all(color: AppColors.primary, width: 1.5),
-              ),
-              child: CircleAvatar(
-                radius: 22,
-                backgroundColor: AppColors.primary,
-                child: Text(
-                  provider.user?.name.initials ?? '',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: AppColors.borderSubtle),
+              const SizedBox(height: 12),
+              Row(
                 children: [
-                  Text(
-                    'Selamat Datang, 👋',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Total Produk',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppColors.textMuted,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '${products.length}',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    provider.user?.name ?? 'Pengguna',
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
-                    ),
+                  Container(
+                    height: 28,
+                    width: 1,
+                    color: AppColors.borderSubtle,
                   ),
-                ],
-              ),
-            ),
-            IconButton(
-              icon: Stack(
-                children: [
-                  const Icon(Icons.notifications_none_rounded, size: 26),
-                  Positioned(
-                    right: 2,
-                    top: 2,
-                    child: Container(
-                      width: 9,
-                      height: 9,
-                      decoration: const BoxDecoration(
-                        color: AppColors.stockOut,
-                        shape: BoxShape.circle,
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Total Barang',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$totalItemsCount pcs',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
-              onPressed: () {
-                Navigator.of(
-                  context,
-                ).push(SmoothPageRoute(page: ManageCategoryScreen()));
-              },
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActionButtonsRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildActionButton(
+            label: 'Stok Masuk',
+            icon: Icons.south_west_rounded,
+            iconColor: AppColors.stockIn,
+            onTap: () => Navigator.push(
+              context,
+              SmoothPageRoute(page: const StockInScreen()),
             ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildActionButton(
+            label: 'Stok Keluar',
+            icon: Icons.north_east_rounded,
+            iconColor: AppColors.stockOut,
+            onTap: () => Navigator.push(
+              context,
+              SmoothPageRoute(page: const StockOutScreen()),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildActionButton(
+            label: 'Opname',
+            icon: Icons.fact_check_outlined,
+            iconColor: AppColors.warning,
+            onTap: () => Navigator.push(
+              context,
+              SmoothPageRoute(page: StockOpnameScreen()),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton({
+    required String label,
+    required IconData icon,
+    required Color iconColor,
+    required VoidCallback onTap,
+  }) {
+    return AppCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(vertical: 14),
+      borderRadius: 14,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: iconColor, size: 20),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLowStockSection() {
+    return Selector<ProductProvider, List<Product>>(
+      selector: (_, p) => p.lowStockItems,
+      builder: (context, lowStockItems, _) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Stok Menipis (${lowStockItems.length})',
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    if (widget.onNavigateToTab != null) widget.onNavigateToTab!(1);
+                  },
+                  child: const Text(
+                    'Lihat semua',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryAccent,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (lowStockItems.isEmpty)
+              AppCard(
+                padding: const EdgeInsets.all(16),
+                child: const Center(
+                  child: Text(
+                    'Semua stok barang tersedia aman.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  ),
+                ),
+              )
+            else
+              AppCard(
+                padding: EdgeInsets.zero,
+                borderRadius: 16,
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: lowStockItems.length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1, color: AppColors.borderSubtle),
+                  itemBuilder: (context, index) {
+                    final item = lowStockItems[index];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.name,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  item.categoryName,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(
+                                  text: 'Sisa ${item.currentStock}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.warning,
+                                  ),
+                                ),
+                                TextSpan(
+                                  text: ' / Min ${item.minimumStock}',
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.warning,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildRecentActivitiesSection() {
+    return Selector<StockProvider, List<ProductLog>>(
+      selector: (_, p) => p.productLogs,
+      builder: (context, logs, _) {
+        final recentLogs = logs.take(5).toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Aktivitas Terakhir',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    if (widget.onNavigateToTab != null) widget.onNavigateToTab!(2);
+                  },
+                  child: const Text(
+                    'Lihat semua',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primaryAccent,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (recentLogs.isEmpty)
+              AppCard(
+                padding: const EdgeInsets.all(16),
+                child: const Center(
+                  child: Text(
+                    'Belum ada aktivitas stok.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  ),
+                ),
+              )
+            else
+              AppCard(
+                padding: EdgeInsets.zero,
+                borderRadius: 16,
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: recentLogs.length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1, color: AppColors.borderSubtle),
+                  itemBuilder: (context, index) {
+                    final item = recentLogs[index];
+                    final isIn = item.productLogType == ProductLogType.stockIn;
+                    final isOut = item.productLogType == ProductLogType.stockOut;
+
+                    final Color iconBg = isIn
+                        ? AppColors.stockInBg
+                        : isOut
+                            ? AppColors.stockOutBg
+                            : AppColors.warningBg;
+                    final Color iconColor = isIn
+                        ? AppColors.stockIn
+                        : isOut
+                            ? AppColors.stockOut
+                            : AppColors.warning;
+                    final IconData iconData = isIn
+                        ? Icons.south_west_rounded
+                        : isOut
+                            ? Icons.north_east_rounded
+                            : Icons.fact_check_outlined;
+
+                    final String qtyText = isIn
+                        ? '+${item.stockDifferent} pcs'
+                        : isOut
+                            ? '-${item.stockDifferent} pcs'
+                            : '${item.stockDifferent > 0 ? "+" : ""}${item.stockDifferent} pcs';
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 32,
+                            height: 32,
+                            decoration: BoxDecoration(
+                              color: iconBg,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(iconData, color: iconColor, size: 16),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.productName,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textPrimary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  DateFormatter.dayHours(item.createdAt),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Text(
+                            qtyText,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: iconColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
           ],
         );
       },

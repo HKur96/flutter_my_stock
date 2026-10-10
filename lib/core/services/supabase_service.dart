@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_catat_stok/core/config/supabase_config.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';

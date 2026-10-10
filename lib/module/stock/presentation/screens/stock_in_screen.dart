@@ -3,10 +3,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/core/services/local_storage_service.dart';
+import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
+import 'package:flutter_catat_stok/core/widgets/app_card.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
 import 'package:flutter_catat_stok/module/stock/domain/dto/stock_transaction_dto.dart';
 import 'package:flutter_catat_stok/module/stock/presentation/provider/stock_provider.dart';
+import 'package:flutter_catat_stok/module/stock/presentation/widgets/product_search_delegate.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 
@@ -21,22 +24,34 @@ class StockInScreen extends StatefulWidget {
 
 class _StockInScreenState extends State<StockInScreen> {
   Product? _selectedProduct;
-  int _quantity = 1;
-  final _qtyController = TextEditingController(text: '1');
+  int _quantity = 10;
+  final _qtyController = TextEditingController(text: '10');
+  final _priceController = TextEditingController();
   final _noteController = TextEditingController();
-  final _dateController = TextEditingController(text: '07 Okt 2026, 09:30');
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    _selectedProduct =
-        widget.initialProduct ?? context.read<ProductProvider>().products.first;
+    if (_selectedProduct != null) {
+      _selectedProduct = widget.initialProduct;
+      _priceController.text = _selectedProduct!.purchasePrice
+          .toInt()
+          .toString();
+    }
   }
 
-  void _incrementQty() {
+  @override
+  void dispose() {
+    _qtyController.dispose();
+    _priceController.dispose();
+    _noteController.dispose();
+    super.dispose();
+  }
+
+  void _incrementQty(int amount) {
     setState(() {
-      _quantity++;
+      _quantity += amount;
       _qtyController.text = _quantity.toString();
     });
   }
@@ -46,6 +61,19 @@ class _StockInScreenState extends State<StockInScreen> {
       setState(() {
         _quantity--;
         _qtyController.text = _quantity.toString();
+      });
+    }
+  }
+
+  Future<void> _openProductSearch(List<Product> products) async {
+    final selected = await showSearch<Product?>(
+      context: context,
+      delegate: ProductSearchDelegate(products),
+    );
+    if (selected != null) {
+      setState(() {
+        _selectedProduct = selected;
+        _priceController.text = selected.purchasePrice.toInt().toString();
       });
     }
   }
@@ -64,15 +92,15 @@ class _StockInScreenState extends State<StockInScreen> {
 
     final currentUser = await LocalStorageService().getUser();
     if (currentUser == null) {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
       return;
     }
 
     if (!mounted) return;
+
+    final buyPrice =
+        int.tryParse(_priceController.text.replaceAll('.', '')) ??
+        _selectedProduct!.purchasePrice.toInt();
 
     final response = await context.read<StockProvider>().stockIn(
       StockTransactionDto(
@@ -80,7 +108,7 @@ class _StockInScreenState extends State<StockInScreen> {
         productId: _selectedProduct!.id,
         type: StockTransactionType.stockIn,
         quantity: _quantity,
-        purchasePrice: _selectedProduct!.purchasePrice,
+        purchasePrice: buyPrice.toDouble(),
         createdAt: DateTime.now(),
         note: _noteController.text.trim(),
       ),
@@ -101,87 +129,432 @@ class _StockInScreenState extends State<StockInScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final products = context.watch<ProductProvider>().products;
+    final currentStock = _selectedProduct?.currentStock ?? 0;
+    final newStock = currentStock + _quantity;
+    final unit = _selectedProduct?.unit ?? 'pcs';
+    final buyPrice =
+        int.tryParse(_priceController.text.replaceAll('.', '')) ??
+        (_selectedProduct?.purchasePrice.toInt() ?? 0);
+    final totalCost = buyPrice * _quantity;
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Catat Stok Masuk'),
+        title: const Text('Stok Masuk'),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search_rounded),
+            tooltip: 'Cari Produk',
+            onPressed: () => _openProductSearch(products),
+          ),
+        ],
       ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppColors.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 10,
-              offset: const Offset(0, -4),
-            ),
-          ],
+          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
         ),
-        child: ElevatedButton.icon(
-          onPressed: _isLoading ? null : _handleSaveStockIn,
-          style: ElevatedButton.styleFrom(backgroundColor: AppColors.stockIn),
-          icon: _isLoading
-              ? const SizedBox.shrink()
-              : const Icon(Icons.check_rounded, color: Colors.white),
-          label: _isLoading
-              ? const SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: CircularProgressIndicator(
+        child: SafeArea(
+          child: ElevatedButton.icon(
+            onPressed: _isLoading ? null : _handleSaveStockIn,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              minimumSize: const Size(double.infinity, 48),
+            ),
+            icon: _isLoading
+                ? const SizedBox.shrink()
+                : const Icon(
+                    Icons.check_circle_outline_rounded,
                     color: Colors.white,
-                    strokeWidth: 2.5,
+                    size: 20,
                   ),
-                )
-              : const Text('Simpan Stok Masuk'),
+            label: _isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Text('Simpan Stok Masuk'),
+          ),
         ),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Banner
+            // Selected Product Preview Card (Match Stitch 07_stok_masuk)
+            AppCard(
+              onTap: () => _openProductSearch(products),
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryLight,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.inventory_2_outlined,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              _selectedProduct?.categoryName ?? 'Kategori',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              'SKU: ${_selectedProduct?.sku ?? "-"}',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          _selectedProduct?.name ?? 'Pilih Produk...',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.stockInBg,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Stok saat ini: $currentStock $unit',
+                            style: const TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.stockIn,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.textMuted,
+                    ),
+                    onPressed: () => _openProductSearch(products),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Quantity Input Card (Match Stitch 07_stok_masuk)
+            AppCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Jumlah Barang Masuk ($unit) *',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                      const Text(
+                        'Siap ditambah',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.stockIn,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      InkWell(
+                        onTap: _decrementQty,
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.remove_rounded,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.surfaceContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: TextField(
+                              controller: _qtyController,
+                              keyboardType: TextInputType.number,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                              ),
+                              onChanged: (val) {
+                                final n = int.tryParse(val);
+                                if (n != null && n > 0)
+                                  setState(() => _quantity = n);
+                              },
+                              decoration: const InputDecoration(
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      InkWell(
+                        onTap: () => _incrementQty(1),
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(
+                            Icons.add_rounded,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'Pintasan Cepat:',
+                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      _buildQuickChip('+5', () => _incrementQty(5)),
+                      const SizedBox(width: 6),
+                      _buildQuickChip('+10', () => _incrementQty(10)),
+                      const SizedBox(width: 6),
+                      _buildQuickChip('+20', () => _incrementQty(20)),
+                      const SizedBox(width: 6),
+                      _buildQuickChip('+40', () => _incrementQty(40)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Price Input Card
+            AppCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Harga Beli Satuan *',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _priceController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(
+                      prefixText: 'Rp ',
+                      hintText: '0',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Notes Input Card
+            AppCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Catatan Kulakan (Opsional)',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _noteController,
+                    decoration: const InputDecoration(
+                      hintText:
+                          'cth: Kulakan Toko Grosir Jaya Makmur, faktur #...',
+                      prefixIcon: Icon(Icons.store_outlined, size: 20),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Automatic Summary Card (Match Stitch 07_stok_masuk)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: AppColors.stockInBg,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.stockIn.withOpacity(0.3)),
+                border: Border.all(color: AppColors.stockInBorder),
               ),
-              child: Row(
-                children: const [
-                  CircleAvatar(
-                    backgroundColor: AppColors.stockIn,
-                    radius: 20,
-                    child: Icon(
-                      Icons.arrow_downward_rounded,
-                      color: Colors.white,
-                      size: 22,
-                    ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(
+                        Icons.auto_awesome_rounded,
+                        size: 16,
+                        color: AppColors.stockIn,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'RINGKASAN OTOMATIS',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.stockIn,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.inventory_2_outlined,
+                              size: 18,
+                              color: AppColors.textMuted,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Stok akan menjadi:',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
                         Text(
-                          'Penerimaan Stok / Barang Masuk',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                          '$newStock $unit',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary,
                           ),
                         ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.payments_outlined,
+                              size: 18,
+                              color: AppColors.textMuted,
+                            ),
+                            SizedBox(width: 8),
+                            Text(
+                              'Total Biaya Kulakan:',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
+                        ),
                         Text(
-                          'Jumlah stok akan otomatis bertambah setelah disimpan.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
+                          CurrencyFormatter.format(totalCost.toDouble()),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.primaryAccent,
                           ),
                         ),
                       ],
@@ -190,240 +563,28 @@ class _StockInScreenState extends State<StockInScreen> {
                 ],
               ),
             ),
-            const SizedBox(height: 20),
-
-            // Select Product Dropdown
-            const Text(
-              'Pilih Produk',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            Selector<ProductProvider, List<Product>>(
-              selector: (_, p) => p.products,
-              builder: (_, products, _) {
-                // Sync _selectedProduct with refreshed list to avoid stale reference
-                if (_selectedProduct != null) {
-                  final match = products.cast<Product?>().firstWhere(
-                    (p) => p!.id == _selectedProduct!.id,
-                    orElse: () => null,
-                  );
-                  if (match != _selectedProduct) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      if (mounted) setState(() => _selectedProduct = match);
-                    });
-                  }
-                }
-                final currentValue = _selectedProduct != null
-                    ? products.cast<Product?>().firstWhere(
-                        (p) => p!.id == _selectedProduct!.id,
-                        orElse: () => null,
-                      )
-                    : null;
-                return DropdownButtonFormField<Product>(
-                  value: currentValue,
-                  isExpanded: true,
-                  decoration: const InputDecoration(
-                    prefixIcon: Icon(
-                      Icons.inventory_2_outlined,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                  items: products.map((p) {
-                    return DropdownMenuItem(
-                      value: p,
-                      child: Text(
-                        '${p.name} (${p.sku})',
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    setState(() {
-                      _selectedProduct = val;
-                    });
-                  },
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Product Selected Preview Card
-            if (_selectedProduct != null) ...[
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Row(
-                  children: [
-                    // ClipRRect(
-                    //   borderRadius: BorderRadius.circular(10),
-                    //   child: Image.network(
-                    //     _selectedProduct!.imageUrl,
-                    //     width: 50,
-                    //     height: 50,
-                    //     fit: BoxFit.cover,
-                    //     errorBuilder: (_, __, ___) => Container(
-                    //       width: 50,
-                    //       height: 50,
-                    //       color: AppColors.inputBg,
-                    //       child: const Icon(Icons.inventory_2_outlined, color: AppColors.textMuted),
-                    //     ),
-                    //   ),
-                    // ),
-                    // const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _selectedProduct!.name,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          Text(
-                            'Stok Sekarang: ${_selectedProduct!.currentStock} ${_selectedProduct!.unit}',
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-            ],
-
-            // Quantity Counter Row
-            const Text(
-              'Jumlah Masuk',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                InkWell(
-                  onTap: _decrementQty,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: const Icon(
-                      Icons.remove_rounded,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: TextFormField(
-                    controller: _qtyController,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    onChanged: (val) {
-                      final n = int.tryParse(val);
-                      if (n != null && n > 0) {
-                        _quantity = n;
-                      }
-                    },
-                    decoration: InputDecoration(
-                      suffixText: _selectedProduct?.unit ?? 'Pcs',
-                    ),
-                    onTapOutside: (event) =>
-                        FocusManager.instance.primaryFocus?.unfocus(),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                InkWell(
-                  onTap: _incrementQty,
-                  borderRadius: BorderRadius.circular(12),
-                  child: Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.stockInBg,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(
-                        color: AppColors.stockIn.withOpacity(0.5),
-                      ),
-                    ),
-                    child: const Icon(
-                      Icons.add_rounded,
-                      color: AppColors.stockIn,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Date Picker Field
-            const Text(
-              'Tanggal & Waktu Transaksi',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _dateController,
-              readOnly: true,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(
-                  Icons.calendar_today_rounded,
-                  color: AppColors.textMuted,
-                ),
-              ),
-              onTapOutside: (event) =>
-                  FocusManager.instance.primaryFocus?.unfocus(),
-            ),
-            const SizedBox(height: 16),
-
-            // Notes / Supplier Input
-            const Text(
-              'Catatan / Supplier (Opsional)',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 6),
-            TextFormField(
-              controller: _noteController,
-              maxLines: 2,
-              decoration: const InputDecoration(
-                hintText: 'Contoh: Restock dari PT Maju Bersama',
-              ),
-              onTapOutside: (event) =>
-                  FocusManager.instance.primaryFocus?.unfocus(),
-            ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickChip(String label, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppColors.textPrimary,
+          ),
         ),
       ),
     );

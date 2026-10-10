@@ -2,11 +2,16 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
+import 'package:flutter_catat_stok/core/widgets/app_text_field.dart';
+import 'package:flutter_catat_stok/core/widgets/empty_state_widget.dart';
+import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/smooth_page_route.dart';
+import '../../../../core/widgets/app_card.dart';
+import 'add_edit_product_screen.dart';
 import 'product_detail_screen.dart';
 
 class ProductListScreen extends StatefulWidget {
@@ -21,6 +26,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
   String _selectedCategory = 'Semua';
   String _searchQuery = '';
 
+  late final user = context.watch<AuthProvider>().user;
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -31,317 +38,394 @@ class _ProductListScreenState extends State<ProductListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Daftar Produk'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.qr_code_scanner_rounded),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Simulasi Scan QR / Barcode SKU')),
-              );
-            },
+      body: SafeArea(
+        child: Column(
+          children: [
+            // Top App Bar Row (Produk, +, User Avatar)
+            _buildTopAppBar(),
+
+            // Search Bar & Scan Button Row
+            _buildSearchBarAndScan(),
+            const SizedBox(height: 12),
+
+            // Category Filter Chips
+            _buildFilterChips(),
+            const SizedBox(height: 14),
+
+            // Metric Strip (Total Item Aktif & Perlu Restok)
+            _buildMetricStrip(),
+            const SizedBox(height: 14),
+
+            // Product List Items
+            _buildProductList(),
+            const SizedBox(height: 12),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchBarAndScan() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: AppTextField(
+              controller: _searchController,
+              onChanged: (val) => setState(() => _searchQuery = val),
+              hintText: 'Cari nama atau SKU',
+              prefixIcon: const Icon(
+                Icons.search_rounded,
+                size: 20,
+                color: AppColors.textMuted,
+              ),
+              suffixIcon: _searchQuery.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 16),
+                      onPressed: () {
+                        _searchController.clear();
+                        setState(() => _searchQuery = '');
+                      },
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            height: 42,
+            width: 42,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: IconButton(
+              icon: const Icon(
+                Icons.qr_code_scanner_rounded,
+                size: 20,
+                color: AppColors.primary,
+              ),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Simulasi Scan Barcode SKU')),
+                );
+              },
+            ),
           ),
         ],
       ),
-      body: Column(
-        children: [
-          // Search & Filter Header Section
-          Container(
-            padding: const EdgeInsets.all(16.0),
-            color: AppColors.surface,
-            child: Column(
-              children: [
-                TextField(
-                  controller: _searchController,
-                  onChanged: (val) {
-                    setState(() {
-                      _searchQuery = val;
-                    });
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Cari nama produk atau SKU...',
-                    prefixIcon: const Icon(
-                      Icons.search_rounded,
-                      color: AppColors.textMuted,
-                    ),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear_rounded, size: 20),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() {
-                                _searchQuery = '';
-                              });
-                            },
-                          )
-                        : null,
+    );
+  }
+
+  Widget _buildFilterChips() {
+    return Selector<ProductProvider, List<String>>(
+      selector: (_, p) => p.categoriesChipFilter,
+      builder: (_, categories, __) {
+        return SizedBox(
+          height: 34,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            itemCount: categories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final cat = categories[index];
+              final isSelected = _selectedCategory == cat;
+              return ChoiceChip(
+                label: Text(cat),
+                selected: isSelected,
+                selectedColor: AppColors.primary,
+                backgroundColor: AppColors.surfaceCard,
+                labelStyle: TextStyle(
+                  color: isSelected ? Colors.white : AppColors.textSecondary,
+                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                  fontSize: 12,
+                ),
+                side: isSelected
+                    ? BorderSide.none
+                    : const BorderSide(color: AppColors.border, width: 1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                visualDensity: VisualDensity.compact,
+                onSelected: (selected) {
+                  if (selected) setState(() => _selectedCategory = cat);
+                },
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildMetricStrip() {
+    return Selector<ProductProvider, List<Product>>(
+      selector: (_, p) => p.products,
+      builder: (context, products, _) {
+        final lowStockCount = products.where((p) => p.isLowStock).length;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: AppCard(
+                  padding: const EdgeInsets.all(12),
+                  borderRadius: 14,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Total Item Aktif',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${products.length} Produk',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Icon(
+                        Icons.inventory_2_outlined,
+                        size: 18,
+                        color: AppColors.primaryAccent,
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 12),
-
-                // Category Chips List
-                Selector<ProductProvider, List<String>>(
-                  selector: (_, p) => p.categoriesChipFilter,
-                  builder: (_, categories, __) {
-                    return SizedBox(
-                      height: 38,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: categories.length,
-                        separatorBuilder: (_, __) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final cat = categories[index];
-                          final isSelected = _selectedCategory == cat;
-                          return ChoiceChip(
-                            label: Text(cat),
-                            selected: isSelected,
-                            selectedColor: AppColors.primary,
-                            backgroundColor: AppColors.inputBg,
-                            labelStyle: TextStyle(
-                              color: isSelected
-                                  ? Colors.white
-                                  : AppColors.textSecondary,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                              fontSize: 13,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: AppCard(
+                  padding: const EdgeInsets.all(12),
+                  borderRadius: 14,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Perlu Restok',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.stockOut,
+                              fontWeight: FontWeight.w500,
                             ),
-                            side: BorderSide.none,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '$lowStockCount Item Tipis',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.stockOut,
                             ),
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() {
-                                  _selectedCategory = cat;
-                                });
-                              }
-                            },
-                          );
-                        },
+                          ),
+                        ],
                       ),
-                    );
-                  },
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 18,
+                        color: AppColors.stockOut,
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const Divider(height: 1, thickness: 1, color: AppColors.border),
+        );
+      },
+    );
+  }
 
-          // Product List Area
-          Selector<ProductProvider, List<Product>>(
-            selector: (_, p) => p.products,
-            shouldRebuild: (previous, next) => true,
-            builder: (context, products, _) {
-              final filteredProducts = products.where((product) {
-                final matchesCategory =
-                    _selectedCategory == 'Semua' ||
-                    product.categoryName == _selectedCategory;
-                final matchesSearch =
-                    product.name.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    ) ||
-                    product.sku.toLowerCase().contains(
-                      _searchQuery.toLowerCase(),
-                    );
-                return matchesCategory && matchesSearch;
-              }).toList();
+  Widget _buildProductList() {
+    return Selector<ProductProvider, List<Product>>(
+      selector: (_, p) => p.products,
+      builder: (context, products, _) {
+        final filtered = products.where((p) {
+          final matchesCat =
+              _selectedCategory == 'Semua' ||
+              p.categoryName == _selectedCategory;
+          final matchesSearch =
+              _searchQuery.isEmpty ||
+              p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              p.sku.toLowerCase().contains(_searchQuery.toLowerCase());
+          return matchesCat && matchesSearch;
+        }).toList();
 
-              return Expanded(
-                child: filteredProducts.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+        if (filtered.isEmpty) {
+          return const Expanded(
+            child: EmptyStateWidget(
+              icon: Icons.inventory_2_outlined,
+              title: 'Produk tidak ditemukan',
+              subtitle: 'Coba ubah kata kunci pencarian atau filter kategori.',
+            ),
+          );
+        }
+
+        return Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => context.read<ProductProvider>().getProducts(),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: AppCard(
+                padding: EdgeInsets.zero,
+                borderRadius: 16,
+                child: ListView.separated(
+                  itemCount: filtered.length,
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1, color: AppColors.borderSubtle),
+                  itemBuilder: (context, index) {
+                    final item = filtered[index];
+                    return InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          SmoothPageRoute(
+                            page: ProductDetailScreen(selectedProduct: item),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.vertical(
+                        top: index == 0
+                            ? const Radius.circular(16)
+                            : Radius.zero,
+                        bottom: index == filtered.length - 1
+                            ? const Radius.circular(16)
+                            : Radius.zero,
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14.0),
+                        child: Row(
                           children: [
-                            Icon(
-                              Icons.inventory_2_outlined,
-                              size: 64,
-                              color: AppColors.textMuted.withOpacity(0.5),
-                            ),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Produk tidak ditemukan',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textSecondary,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item.name,
+                                    style: const TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'SKU: ${item.sku} • ${item.categoryName}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.textMuted,
+                                    ),
+                                  ),
+                                ],
                               ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                RichText(
+                                  text: TextSpan(
+                                    children: [
+                                      const TextSpan(
+                                        text: 'Stok ',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textMuted,
+                                        ),
+                                      ),
+                                      TextSpan(
+                                        text: '${item.currentStock}',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w800,
+                                          color: item.isLowStock
+                                              ? AppColors.stockOut
+                                              : AppColors.textPrimary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  item.isLowStock
+                                      ? 'Menipis • ${CurrencyFormatter.format(item.recommendedSellingPrice.toDouble())}'
+                                      : CurrencyFormatter.format(
+                                          item.recommendedSellingPrice
+                                              .toDouble(),
+                                        ),
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: item.isLowStock
+                                        ? FontWeight.w600
+                                        : FontWeight.w400,
+                                    color: item.isLowStock
+                                        ? AppColors.stockOut
+                                        : AppColors.textMuted,
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
-                      )
-                    : RefreshIndicator(
-                        onRefresh: () =>
-                            context.read<ProductProvider>().getProducts(),
-                        child: ListView.separated(
-                          padding: const EdgeInsets.all(16),
-                          itemCount: filteredProducts.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (context, index) {
-                            final item = filteredProducts[index];
-                            return InkWell(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  SmoothPageRoute(
-                                    page: ProductDetailScreen(
-                                      selectedProduct: item,
-                                    ),
-                                  ),
-                                );
-                              },
-                              borderRadius: BorderRadius.circular(16),
-                              child: Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: AppColors.border),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.02),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 3),
-                                    ),
-                                  ],
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // ClipRRect(
-                                    //   borderRadius: BorderRadius.circular(12),
-                                    //   child: Image.network(
-                                    //     item.imageUrl,
-                                    //     width: 70,
-                                    //     height: 70,
-                                    //     fit: BoxFit.cover,
-                                    //     errorBuilder: (_, __, ___) => Container(
-                                    //       width: 70,
-                                    //       height: 70,
-                                    //       color: AppColors.inputBg,
-                                    //       child: const Icon(
-                                    //         Icons.inventory_2_outlined,
-                                    //         color: AppColors.textMuted,
-                                    //       ),
-                                    //     ),
-                                    //   ),
-                                    // ),
-                                    // const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 2,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: AppColors.primaryLight,
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                ),
-                                                child: Text(
-                                                  item.categoryName,
-                                                  style: const TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: AppColors.primary,
-                                                  ),
-                                                ),
-                                              ),
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 8,
-                                                      vertical: 2,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: item.isLowStock
-                                                      ? AppColors.stockOutBg
-                                                      : AppColors.stockInBg,
-                                                  borderRadius:
-                                                      BorderRadius.circular(6),
-                                                ),
-                                                child: Text(
-                                                  item.isLowStock
-                                                      ? 'Stok Menipis'
-                                                      : 'Tersedia',
-                                                  style: TextStyle(
-                                                    fontSize: 11,
-                                                    fontWeight: FontWeight.bold,
-                                                    color: item.isLowStock
-                                                        ? AppColors.stockOut
-                                                        : AppColors.stockIn,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                          const SizedBox(height: 6),
-                                          Text(
-                                            item.name,
-                                            style: const TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.bold,
-                                              color: AppColors.textPrimary,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          Text(
-                                            'SKU: ${item.sku}',
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: AppColors.textMuted,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Row(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              Text(
-                                                CurrencyFormatter.format(
-                                                  item.recommendedSellingPrice
-                                                      .toDouble(),
-                                                ),
-                                                style: const TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: AppColors.primary,
-                                                ),
-                                              ),
-                                              Text(
-                                                'Stok: ${item.currentStock} ${item.unit}',
-                                                style: const TextStyle(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: AppColors.textPrimary,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          },
-                        ),
                       ),
-              );
-            },
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTopAppBar() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Text(
+            'Produk',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+              letterSpacing: -0.5,
+            ),
+          ),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.add_rounded, size: 24),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    SmoothPageRoute(page: const AddEditProductScreen()),
+                  );
+                },
+              ),
+            ],
           ),
         ],
       ),

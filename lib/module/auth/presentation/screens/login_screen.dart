@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../../core/theme/app_theme.dart';
-import '../../../../core/theme/app_typography.dart';
-import '../../../../core/widgets/widgets.dart';
+import '../../../../core/widgets/app_button.dart';
+import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_text_field.dart';
 import '../../../../core/utils/smooth_page_route.dart';
 import 'package:provider/provider.dart';
 import '../provider/auth_provider.dart';
@@ -49,6 +50,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _isLoading.dispose();
     super.dispose();
   }
 
@@ -64,38 +66,59 @@ class _LoginScreenState extends State<LoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                // Header Logo Icon
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(
+                      Icons.inventory_2_rounded,
+                      size: 32,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 const Text(
                   'Stok Saya',
                   textAlign: TextAlign.center,
-                  style: AppTypography.h1,
+                  style: TextStyle(
+                    fontSize: 26,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    letterSpacing: -0.5,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
                 const Text(
-                  'Kelola inventaris toko & barang pribadi dengan mudah dan teratur.',
+                  'Kelola inventaris toko & barang pribadi dengan mudah.',
                   textAlign: TextAlign.center,
-                  style: AppTypography.bodyMedium,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 32),
 
                 // Form Card
-                Container(
+                AppCard(
                   padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.border),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
-                      ),
-                    ],
-                  ),
+                  borderRadius: 20,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Masuk ke Akun', style: AppTypography.h3),
+                      const Text(
+                        'Masuk ke Akun',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
                       const SizedBox(height: 20),
 
                       // Email Field
@@ -107,6 +130,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: const Icon(
                           Icons.email_outlined,
                           color: AppColors.textMuted,
+                          size: 20,
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -133,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             'Lupa kata sandi?',
                             style: TextStyle(
                               fontSize: 13,
-                              color: AppColors.primary,
+                              color: AppColors.primaryAccent,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -141,11 +165,11 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Modular Primary Button
+                      // Login Button
                       ValueListenableBuilder<bool>(
                         valueListenable: _isLoading,
-                        builder: (context, isLoading, _) {
-                          return AppButton.primary(
+                        builder: (context, isLoading, child) {
+                          return AppButton(
                             text: 'Masuk Sekarang',
                             isLoading: isLoading,
                             onPressed: _handleLogin,
@@ -157,13 +181,16 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 24),
 
-                // Register Prompt
+                // Register Navigation Link
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text(
-                      'Belum memiliki akun? ',
-                      style: AppTypography.bodyMedium,
+                      'Belum punya akun? ',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     GestureDetector(
                       onTap: () {
@@ -173,11 +200,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         );
                       },
                       child: const Text(
-                        'Daftar Akun',
+                        'Daftar disini',
                         style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.primaryAccent,
                         ),
                       ),
                     ),

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/core/utils/smooth_page_route.dart';
+import 'package:flutter_catat_stok/core/widgets/app_card.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
 import 'package:flutter_catat_stok/screens/main_navigation_screen.dart';
@@ -30,6 +31,7 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -45,17 +47,28 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               Text(
                 category != null ? 'Edit Kategori' : 'Tambah Kategori Baru',
                 style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 16),
               const Text(
-                'Nama Kategori',
+                'Nama Kategori *',
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -71,6 +84,7 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                   prefixIcon: Icon(
                     Icons.category_outlined,
                     color: AppColors.textMuted,
+                    size: 20,
                   ),
                 ),
               ),
@@ -86,13 +100,13 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                         _productProvider.updateCategoryName(
                           category: CategoryItem(
                             id: category.id,
-                            name: nameController.text,
+                            name: nameController.text.trim(),
                             products: category.products,
                           ),
                         );
                       }
                     } else {
-                      _productProvider.addCategory(name: nameController.text);
+                      _productProvider.addCategory(name: nameController.text.trim());
                     }
 
                     Navigator.pop(context);
@@ -116,51 +130,57 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
       appBar: AppBar(
         title: Text(
           (widget.type == PickCategoryType.initial)
-              ? 'Tambah Kategori Baru'
+              ? 'Buat Kategori Awal'
               : 'Kelola Kategori',
         ),
         automaticallyImplyLeading: widget.type != PickCategoryType.initial,
         leading: (widget.type == PickCategoryType.initial)
             ? null
             : IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 20),
+                icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
                 onPressed: () => Navigator.pop(context),
               ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'manage_category_fab',
-        onPressed: () => _showAddEditCategoryModal(categories: []),
+        onPressed: () => _showAddEditCategoryModal(categories: _productProvider.categories),
         backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add_rounded, color: Colors.white),
+        elevation: 2,
+        icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
         label: const Text(
           'Kategori Baru',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
         ),
       ),
       body: RefreshIndicator(
         onRefresh: () => _productProvider.getCategories(),
         child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Banner Info
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.2)),
-                ),
+              AppCard(
+                backgroundColor: AppColors.primaryLight,
+                borderColor: AppColors.border,
+                padding: const EdgeInsets.all(14),
                 child: Row(
-                  children: const [
-                    Icon(
-                      Icons.grid_view_rounded,
-                      color: AppColors.primary,
-                      size: 28,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primaryAccent,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.grid_view_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
                     ),
-                    SizedBox(width: 14),
-                    Expanded(
+                    const SizedBox(width: 12),
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -168,10 +188,11 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                             'Kategori Produk',
                             style: TextStyle(
                               fontSize: 14,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                             ),
                           ),
+                          SizedBox(height: 2),
                           Text(
                             'Kelompokkan barang agar lebih rapi & mudah dicari.',
                             style: TextStyle(
@@ -185,33 +206,34 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                   ],
                 ),
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               // List of Categories
               Selector<ProductProvider, List<CategoryItem>>(
                 selector: (_, provider) => provider.categories,
                 builder: (context, categoryList, _) {
+                  if (categoryList.isEmpty) {
+                    return AppCard(
+                      padding: const EdgeInsets.all(24),
+                      child: const Center(
+                        child: Text(
+                          'Belum ada kategori diset. Klik tombol + Kategori Baru.',
+                          style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                        ),
+                      ),
+                    );
+                  }
+
                   return ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: categoryList.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final cat = categoryList[index];
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.border),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.02),
-                              blurRadius: 8,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
+                      return AppCard(
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        borderRadius: 14,
                         child: Row(
                           children: [
                             Expanded(
@@ -221,8 +243,8 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                                   Text(
                                     cat.name,
                                     style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
                                       color: AppColors.textPrimary,
                                     ),
                                   ),
@@ -230,8 +252,9 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                                   Text(
                                     '${cat.productCount} Produk terdaftar',
                                     style: const TextStyle(
-                                      fontSize: 13,
-                                      color: AppColors.textSecondary,
+                                      fontSize: 12,
+                                      color: AppColors.textMuted,
+                                      fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ],
@@ -241,7 +264,7 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                               icon: const Icon(
                                 Icons.edit_outlined,
                                 color: AppColors.textSecondary,
-                                size: 20,
+                                size: 18,
                               ),
                               onPressed: () => _showAddEditCategoryModal(
                                 categories: categoryList,
@@ -252,7 +275,7 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                               icon: const Icon(
                                 Icons.delete_outline_rounded,
                                 color: AppColors.stockOut,
-                                size: 20,
+                                size: 18,
                               ),
                               onPressed: () {
                                 if (cat.productCount > 0) {
@@ -279,7 +302,7 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
               ),
 
               if (widget.type == PickCategoryType.initial) ...[
-                const SizedBox(height: 20),
+                const SizedBox(height: 24),
                 Center(
                   child: Consumer<ProductProvider>(
                     builder: (context, provider, _) {
@@ -306,7 +329,7 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                           'Lanjut ke Dashboard',
                           style: TextStyle(
                             color: Colors.white,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       );

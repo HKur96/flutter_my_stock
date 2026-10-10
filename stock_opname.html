@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+
+<html lang="id"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_stack" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@500;700&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "surface-muted": "#eae8e2", "on-secondary-fixed": "#00210a", "on-error-container": "#93000a", "surface-tint": "#1a6962", "on-tertiary-fixed": "#410002", "surface-variant": "#e4e3dc", "surface-card": "#ffffff", "text-primary": "#1b1c18", "tertiary-container": "#a60811", "surface-container-lowest": "#ffffff", "stock-in-subtle": "#e8f8ed", "on-primary-fixed": "#00201d", "surface-container-highest": "#e4e3dc", "on-primary-container": "#8ad2c8", "on-surface": "#1b1c18", "stock-out-subtle": "#fde8e8", "outline": "#6f7977", "surface-dim": "#dbdad3", "surface-canvas": "#fbf9f3", "inverse-primary": "#8cd4ca", "surface-container": "#efeee7", "on-secondary-fixed-variant": "#005323", "on-tertiary": "#ffffff", "primary-fixed-dim": "#8cd4ca", "border-strong": "#bdc9c6", "secondary": "#016d30", "surface-container-low": "#f5f4ed", "primary": "#00433d", "secondary-fixed": "#9bf7aa", "stock-warning-subtle": "#fef3c7", "surface-bright": "#fbf9f2", "tertiary-fixed-dim": "#ffb4ab", "surface": "#fbf9f2", "tertiary-fixed": "#ffdad6", "primary-container": "#005c55", "text-muted": "#3e4947", "primary-fixed": "#a7f0e6", "on-primary": "#ffffff", "on-secondary": "#ffffff", "surface-container-high": "#eae8e1", "stock-in": "#006d30", "on-tertiary-fixed-variant": "#93000a", "on-surface-variant": "#3f4947", "on-tertiary-container": "#ffb1a8", "tertiary": "#7c0007", "on-primary-fixed-variant": "#00504a", "on-secondary-container": "#0c7234", "stock-warning": "#b45309", "background": "#fbf9f2", "inverse-on-surface": "#f2f1ea", "inverse-surface": "#30312c", "surface-subtle": "#f5f4ed", "stock-out": "#a50710", "on-error": "#ffffff", "error-container": "#ffdad6", "secondary-fixed-dim": "#7fda90", "border-hairline": "#e4e2dc", "outline-variant": "#bec9c6", "error": "#ba1a1a", "on-background": "#1b1c18", "secondary-container": "#98f4a7" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "space-xl": "2rem", "space-sm": "0.5rem", "space-md": "1rem", "space-xs": "0.25rem", "space-lg": "1.5rem", "margin": "1rem", "gutter": "1rem" }, fontFamily: { "headline-md": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "caption": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"], "numeric-stat": ["JetBrains Mono", "monospace"], "title-sm": ["Plus Jakarta Sans"] }, fontSize: { "headline-md": ["20px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "700" }], "label-md": ["14px", { "lineHeight": "20px", "fontWeight": "600" }], "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "caption": ["12px", { "lineHeight": "16px", "fontWeight": "400" }], "headline-lg": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "numeric-stat": ["22px", { "lineHeight": "28px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "title-sm": ["16px", { "lineHeight": "24px", "fontWeight": "600" }] } } } };</script><style>@layer base{html,body{width:100vw;margin:0;padding:0;background-color:#fbf9f2;}body{overscroll-behavior-y:none;}.pb-safe{padding-bottom:env(safe-area-inset-bottom,0px);}.pt-safe{padding-top:env(safe-area-inset-top,0px);}main>:first-child{margin-top:0!important;}main>:last-child{margin-bottom:0!important;}}::-webkit-scrollbar{display:none;}</style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-background font-body-md text-body-md text-on-surface antialiased flex flex-col min-h-screen"><header class="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-xl border-b border-border-hairline pt-safe"><div class="h-16 px-margin flex items-center justify-between"><div class="flex items-center gap-space-xs"><button aria-label="Kembali" class="w-11 h-11 -ml-space-xs rounded-lg flex items-center justify-center text-on-surface hover:bg-surface-subtle active:bg-surface-muted transition-colors" onclick="history.back()" type="button"><span class="material-symbols-outlined text-[22px]">arrow_back</span></button><h1 class="font-headline-md text-headline-md text-on-surface tracking-tight select-none truncate">Stok Opname</h1></div><div class="flex items-center gap-space-xs"><div class="h-8 px-2.5 rounded border border-border-hairline bg-surface-card flex items-center justify-center text-on-surface-variant font-numeric-stat text-caption">POS-01</div></div></div></header><main class="flex flex-col flex-1 relative w-full pt-16 pb-safe bg-background"><div class="flex flex-col w-full pb-28">
+<div class="px-margin pt-space-md flex flex-col gap-space-md">
+<!-- Header & Product Ledger Block -->
+<div class="bg-surface-card rounded-xl p-space-md flex flex-col gap-space-sm shadow-sm">
+<div class="flex items-start justify-between gap-space-sm">
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-space-xs text-text-muted font-caption text-caption mb-0.5">
+<span>Sembako</span>
+<span>•</span>
+<span class="font-numeric-stat tracking-tight">SBK-004</span>
+</div>
+<h2 class="font-headline-md text-headline-md text-text-primary tracking-tight truncate">Minyak Goreng Bimoli 1L</h2>
+<p class="font-body-sm text-body-sm text-text-muted mt-0.5">Kemasan Pouch • Rak A-02</p>
+</div>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container font-label-sm text-label-sm text-text-muted shrink-0">
+<span class="material-symbols-outlined text-[14px]">history</span>
+          14 hari lalu
+        </span>
+</div>
+<!-- System Stock Reference Bar -->
+<div class="mt-1 bg-surface-subtle rounded-lg p-space-sm flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-muted text-[18px]">inventory_2</span>
+<span class="font-body-sm text-body-sm text-text-muted">Stok Sistem Tercatat</span>
+</div>
+<div class="flex items-baseline gap-1">
+<span class="font-numeric-stat text-numeric-stat text-text-primary" id="system-stock">10</span>
+<span class="font-label-sm text-label-sm text-text-muted">botol</span>
+</div>
+</div>
+</div>
+<!-- Stepper Section: Physical Count -->
+<div class="bg-surface-card rounded-xl p-space-md flex flex-col items-center gap-space-md shadow-sm">
+<div class="flex flex-col items-center gap-0.5">
+<span class="font-label-sm text-label-sm text-text-muted uppercase tracking-wider">Hitung Stok Fisik Aktual</span>
+<span class="font-caption text-caption text-text-muted">Verifikasi hitungan fisik langsung di rak</span>
+</div>
+<!-- Compound Stepper Node -->
+<div class="w-full max-w-xs flex items-center justify-between bg-surface-subtle p-1.5 rounded-xl">
+<button aria-label="Kurangi jumlah fisik" class="w-14 h-14 rounded-lg bg-surface-card text-text-primary flex items-center justify-center active:bg-surface-muted transition-colors" id="btn-decrement" type="button">
+<span class="material-symbols-outlined text-[24px]">remove</span>
+</button>
+<div class="flex flex-col items-center justify-center flex-1 px-2">
+<div class="flex items-baseline gap-1">
+<span class="font-numeric-stat text-[40px] leading-none text-text-primary tracking-tight font-bold" id="actual-stock-display">8</span>
+</div>
+<span class="font-caption text-caption text-text-muted font-medium mt-1">botol</span>
+</div>
+<button aria-label="Tambah jumlah fisik" class="w-14 h-14 rounded-lg bg-surface-card text-text-primary flex items-center justify-center active:bg-surface-muted transition-colors" id="btn-increment" type="button">
+<span class="material-symbols-outlined text-[24px]">add</span>
+</button>
+</div>
+<!-- Quick Numeric Presets -->
+<div class="flex items-center gap-2 w-full justify-center">
+<button class="preset-btn px-3 py-1.5 rounded bg-surface-subtle text-text-muted font-numeric-stat text-caption hover:bg-surface-muted active:bg-surface-variant transition-colors" data-val="0" type="button">0 (Nol)</button>
+<button class="preset-btn px-3 py-1.5 rounded bg-surface-subtle text-text-muted font-numeric-stat text-caption hover:bg-surface-muted active:bg-surface-variant transition-colors" data-val="8" type="button">8 (Hitung)</button>
+<button class="preset-btn px-3 py-1.5 rounded bg-surface-subtle text-text-muted font-numeric-stat text-caption hover:bg-surface-muted active:bg-surface-variant transition-colors" data-val="10" type="button">10 (Sistem)</button>
+</div>
+</div>
+<!-- Calculated Variance Metric Card -->
+<div class="bg-stock-warning-subtle rounded-xl p-space-md flex flex-col gap-space-sm transition-all duration-200" id="variance-card">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-stock-warning text-[20px]" id="variance-icon">warning</span>
+<span class="font-label-md text-label-md text-stock-warning font-semibold" id="variance-status-text">Stok Fisik Lebih Sedikit</span>
+</div>
+<span class="font-caption text-caption px-2 py-0.5 rounded bg-surface-card/60 text-text-muted font-numeric-stat">HPP @Rp 20.000</span>
+</div>
+<div class="grid grid-cols-2 gap-space-sm pt-1">
+<div class="bg-surface-card/75 rounded-lg p-space-sm flex flex-col">
+<span class="font-caption text-caption text-text-muted">Kuantitas Selisih</span>
+<span class="font-numeric-stat text-headline-md text-stock-warning mt-0.5 font-bold" id="variance-qty">-2 botol</span>
+</div>
+<div class="bg-surface-card/75 rounded-lg p-space-sm flex flex-col">
+<span class="font-caption text-caption text-text-muted">Nilai Penyesuaian</span>
+<span class="font-numeric-stat text-headline-md text-stock-warning mt-0.5 font-bold" id="variance-value">-Rp 40.000</span>
+</div>
+</div>
+</div>
+<!-- Reason Selector -->
+<div class="bg-surface-card rounded-xl p-space-md flex flex-col gap-space-sm shadow-sm" id="reason-section">
+<div class="flex items-center justify-between">
+<label class="font-label-md text-label-md text-text-primary">Alasan Selisih</label>
+<span class="font-caption text-caption text-stock-out font-medium" id="reason-badge">Wajib diisi</span>
+</div>
+<div aria-label="Alasan selisih stok" class="flex flex-wrap gap-2 pt-1" id="reason-container" role="radiogroup">
+<button aria-checked="false" class="reason-pill h-9 px-3.5 rounded-full bg-surface-subtle text-text-muted font-label-sm text-label-sm active:bg-surface-muted transition-all text-left flex items-center" role="radio" type="button">
+          Hilang / Tidak Ditemukan
+        </button>
+<button aria-checked="true" class="reason-pill h-9 px-3.5 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm active:bg-primary transition-all text-left flex items-center" role="radio" type="button">
+          Rusak / Bocor
+        </button>
+<button aria-checked="false" class="reason-pill h-9 px-3.5 rounded-full bg-surface-subtle text-text-muted font-label-sm text-label-sm active:bg-surface-muted transition-all text-left flex items-center" role="radio" type="button">
+          Salah Catat Masuk
+        </button>
+<button aria-checked="false" class="reason-pill h-9 px-3.5 rounded-full bg-surface-subtle text-text-muted font-label-sm text-label-sm active:bg-surface-muted transition-all text-left flex items-center" role="radio" type="button">
+          Lainnya
+        </button>
+</div>
+</div>
+<!-- Audit Note Input Field -->
+<div class="bg-surface-card rounded-xl p-space-md flex flex-col gap-space-xs shadow-sm">
+<label class="font-label-md text-label-md text-text-primary" for="opname-note">Catatan Pemeriksaan</label>
+<div class="relative w-full">
+<input class="w-full h-12 bg-surface-subtle rounded-lg px-3.5 font-body-sm text-body-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:bg-surface-container-low transition-colors" id="opname-note" placeholder="cth: Ditemukan 2 botol bocor di gudang belakang" type="text" value="Ditemukan 2 botol bocor di gudang belakang"/>
+</div>
+<div class="flex items-center justify-between text-text-muted font-caption text-caption px-1 pt-1">
+<span>Keterangan audit internal</span>
+<span id="char-counter">41/120</span>
+</div>
+</div>
+</div>
+<!-- Sticky Bottom Operational Bar -->
+<div class="fixed bottom-0 inset-x-0 bg-surface/95 backdrop-blur-md px-margin py-3 pb-safe z-40">
+<div class="max-w-md mx-auto w-full flex flex-col gap-2">
+<button class="w-full h-12 rounded-xl bg-primary-container text-on-primary font-label-md text-label-md flex items-center justify-center gap-2 active:bg-primary transition-colors select-none" id="btn-submit" type="button">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+<span>Simpan Penyesuaian Opname</span>
+</button>
+</div>
+</div>
+</div>
+<script>
+  (function() {
+    const SYSTEM_STOCK = 10;
+    const UNIT_PRICE = 20000;
+    let actualStock = 8;
+
+    const displayVal = document.getElementById('actual-stock-display');
+    const varianceCard = document.getElementById('variance-card');
+    const varianceIcon = document.getElementById('variance-icon');
+    const varianceStatus = document.getElementById('variance-status-text');
+    const varianceQty = document.getElementById('variance-qty');
+    const varianceValue = document.getElementById('variance-value');
+    const noteInput = document.getElementById('opname-note');
+    const charCounter = document.getElementById('char-counter');
+    const reasonPills = document.querySelectorAll('.reason-pill');
+    const reasonSection = document.getElementById('reason-section');
+    const reasonBadge = document.getElementById('reason-badge');
+
+    function formatRupiah(num) {
+      return 'Rp ' + Math.abs(num).toLocaleString('id-ID');
+    }
+
+    function renderVariance() {
+      const diff = actualStock - SYSTEM_STOCK;
+      const totalAmount = diff * UNIT_PRICE;
+
+      displayVal.textContent = actualStock;
+
+      if (diff === 0) {
+        varianceCard.className = 'bg-stock-in-subtle rounded-xl p-space-md flex flex-col gap-space-sm transition-all duration-200';
+        varianceIcon.textContent = 'verified';
+        varianceIcon.className = 'material-symbols-outlined text-stock-in text-[20px]';
+        varianceStatus.textContent = 'Stok Sesuai (Akurat)';
+        varianceStatus.className = 'font-label-md text-label-md text-stock-in font-semibold';
+        varianceQty.textContent = '0 botol';
+        varianceQty.className = 'font-numeric-stat text-headline-md text-stock-in mt-0.5 font-bold';
+        varianceValue.textContent = 'Rp 0';
+        varianceValue.className = 'font-numeric-stat text-headline-md text-stock-in mt-0.5 font-bold';
+        reasonBadge.textContent = 'Opsional';
+        reasonBadge.className = 'font-caption text-caption text-text-muted font-normal';
+      } else if (diff < 0) {
+        varianceCard.className = 'bg-stock-warning-subtle rounded-xl p-space-md flex flex-col gap-space-sm transition-all duration-200';
+        varianceIcon.textContent = 'warning';
+        varianceIcon.className = 'material-symbols-outlined text-stock-warning text-[20px]';
+        varianceStatus.textContent = 'Stok Fisik Lebih Sedikit';
+        varianceStatus.className = 'font-label-md text-label-md text-stock-warning font-semibold';
+        varianceQty.textContent = diff + ' botol';
+        varianceQty.className = 'font-numeric-stat text-headline-md text-stock-warning mt-0.5 font-bold';
+        varianceValue.textContent = '-' + formatRupiah(totalAmount);
+        varianceValue.className = 'font-numeric-stat text-headline-md text-stock-warning mt-0.5 font-bold';
+        reasonBadge.textContent = 'Wajib diisi';
+        reasonBadge.className = 'font-caption text-caption text-stock-out font-medium';
+      } else {
+        varianceCard.className = 'bg-stock-in-subtle rounded-xl p-space-md flex flex-col gap-space-sm transition-all duration-200';
+        varianceIcon.textContent = 'add_circle';
+        varianceIcon.className = 'material-symbols-outlined text-stock-in text-[20px]';
+        varianceStatus.textContent = 'Stok Fisik Berlebih (Surplus)';
+        varianceStatus.className = 'font-label-md text-label-md text-stock-in font-semibold';
+        varianceQty.textContent = '+' + diff + ' botol';
+        varianceQty.className = 'font-numeric-stat text-headline-md text-stock-in mt-0.5 font-bold';
+        varianceValue.textContent = '+' + formatRupiah(totalAmount);
+        varianceValue.className = 'font-numeric-stat text-headline-md text-stock-in mt-0.5 font-bold';
+        reasonBadge.textContent = 'Wajib diisi';
+        reasonBadge.className = 'font-caption text-caption text-stock-out font-medium';
+      }
+    }
+
+    document.getElementById('btn-decrement').addEventListener('click', function() {
+      if (actualStock > 0) {
+        actualStock -= 1;
+        renderVariance();
+      }
+    });
+
+    document.getElementById('btn-increment').addEventListener('click', function() {
+      actualStock += 1;
+      renderVariance();
+    });
+
+    document.querySelectorAll('.preset-btn').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        actualStock = parseInt(this.getAttribute('data-val'), 10);
+        renderVariance();
+      });
+    });
+
+    reasonPills.forEach(function(pill) {
+      pill.addEventListener('click', function() {
+        reasonPills.forEach(function(p) {
+          p.setAttribute('aria-checked', 'false');
+          p.className = 'reason-pill h-9 px-3.5 rounded-full bg-surface-subtle text-text-muted font-label-sm text-label-sm active:bg-surface-muted transition-all text-left flex items-center';
+        });
+        pill.setAttribute('aria-checked', 'true');
+        pill.className = 'reason-pill h-9 px-3.5 rounded-full bg-primary-container text-on-primary font-label-sm text-label-sm active:bg-primary transition-all text-left flex items-center';
+      });
+    });
+
+    if (noteInput && charCounter) {
+      noteInput.addEventListener('input', function() {
+        charCounter.textContent = this.value.length + '/120';
+      });
+    }
+
+    document.getElementById('btn-submit').addEventListener('click', function() {
+      const origText = this.innerHTML;
+      this.innerHTML = '<span class="material-symbols-outlined animate-spin text-[20px]">sync</span><span>Menyimpan...</span>';
+      setTimeout(() => {
+        this.innerHTML = '<span class="material-symbols-outlined text-[20px]">task_alt</span><span>Tersimpan Sukses!</span>';
+        setTimeout(() => {
+          this.innerHTML = origText;
+        }, 1800);
+      }, 600);
+    });
+
+    renderVariance();
+  })();
+</script></main></body></html>

@@ -204,4 +204,31 @@ class ProductProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<bool> deleteProduct(String id) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final res = await _productRepository.deleteProduct(id);
+      print('heyy $res');
+      if (!res) {
+        throw 'Tidak dapat menghapus produk';
+      }
+
+      _products = _products.where((x) => x.id != id).toList();
+      notifyListeners();
+
+      ScaffoldMessenger.of(
+        gNavigatorKey.currentContext!,
+      ).showSnackBar(SnackBar(content: Text('Produk berhasil dihapus')));
+      return true;
+    } catch (e, s) {
+      print('bjirr $e\n$s');
+      showFlashError('Tidak dapat menghapus produk');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

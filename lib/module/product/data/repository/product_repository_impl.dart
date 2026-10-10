@@ -143,15 +143,27 @@ class ProductRepositoryImpl implements ProductRepository {
   }
 
   @override
-  Future<bool> deleteProduct(String id) {
-    // TODO: implement deleteProduct
-    throw UnimplementedError();
+  Future<bool> deleteProduct(String id) async {
+    try {
+      // Soft delete: nonaktifkan produk alih-alih hapus permanen
+      // untuk menghindari konflik dengan trigger DB pada product_logs.
+      await _client.from('products').update({'is_active': false}).eq('id', id);
+      return true;
+    } on PostgrestException catch (e, s) {
+      print('err sup $e\n$s');
+      return false;
+    } catch (e) {
+      print('err delete $e');
+      return false;
+    }
   }
 
   @override
   Future<List<Product>> getProducts() async {
     try {
-      final response = await _client.from('products').select('''
+      final response = await _client
+          .from('products')
+          .select('''
               id,
               name,
               sku,
@@ -168,7 +180,9 @@ class ProductRepositoryImpl implements ProductRepository {
                 id, 
                 name
               )
-      ''');
+      ''')
+          .eq('is_active', true)
+          .order('current_stock', ascending: true);
       return (response as List)
           .map<Product>((x) => ProductModel.fromJson(x))
           .toList();
