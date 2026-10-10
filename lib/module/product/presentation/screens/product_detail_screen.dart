@@ -7,7 +7,6 @@ import 'package:flutter_catat_stok/core/widgets/app_dialog_confirmation.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
-import 'package:flutter_catat_stok/module/stock/domain/models/product_log.dart';
 import 'package:flutter_catat_stok/module/stock/presentation/provider/stock_provider.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/config/enum.dart';
@@ -29,18 +28,44 @@ class ProductDetailScreen extends StatefulWidget {
 
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   late final user = context.watch<AuthProvider>().user;
+  final ScrollController _scrollController = ScrollController();
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      final provider = context.read<StockProvider>();
+      if (provider.hasDetailMore &&
+          !provider.isDetailLoadingMore &&
+          !provider.isDetailLoading) {
+        provider.getProductDetailLogs(
+          productId: widget.selectedProduct.id,
+          page: provider.detailCurrentPage + 1,
+          limit: 10,
+        );
+      }
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().selectedProduct = widget.selectedProduct;
-      context.read<StockProvider>().getProductLogs(
-        page: 1,
-        limit: 10,
-        filterType: null,
-        searchQuery: widget.selectedProduct.name,
-      );
+      context.read<StockProvider>().getProductDetailLogs(
+            productId: widget.selectedProduct.id,
+            page: 1,
+            limit: 10,
+            isRefresh: true,
+          );
     });
+  }
+
+  @override
+  void dispose() {
+    _scrollController.removeListener(_onScroll);
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -61,6 +86,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           backgroundColor: AppColors.background,
           appBar: _buildAppbar(p),
           body: SingleChildScrollView(
+            controller: _scrollController,
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -486,12 +512,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   Widget _buildStockHistory(Product p) {
-    return Selector<StockProvider, List<ProductLog>>(
-      selector: (_, sp) => sp.productLogs,
-      builder: (context, allLogs, _) {
-        final productLogs = allLogs
-            .where((log) => log.productId == p.id || log.productName == p.name)
-            .toList();
+    return Consumer<StockProvider>(
+      builder: (context, stockProvider, _) {
+        final productLogs = stockProvider.productDetailLogs;
+        final isLoading = stockProvider.isDetailLoading;
+        final isLoadingMore = stockProvider.isDetailLoadingMore;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -530,7 +555,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ],
             ),
             const SizedBox(height: 10),
-            if (productLogs.isEmpty)
+            if (isLoading && productLogs.isEmpty)
+              const AppCard(
+                padding: EdgeInsets.all(20),
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (productLogs.isEmpty)
               AppCard(
                 padding: const EdgeInsets.all(16),
                 child: const Center(
@@ -547,10 +579,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 child: ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: productLogs.length,
+                  itemCount: productLogs.length + (isLoadingMore ? 1 : 0),
                   separatorBuilder: (_, __) =>
                       const Divider(height: 1, color: AppColors.borderSubtle),
                   itemBuilder: (context, index) {
+                    if (index == productLogs.length) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12.0),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      );
+                    }
+
                     final log = productLogs[index];
                     final isIn = log.productLogType == ProductLogType.stockIn;
                     final isOut = log.productLogType == ProductLogType.stockOut;

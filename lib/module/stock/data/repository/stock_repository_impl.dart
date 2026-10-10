@@ -13,38 +13,50 @@ class StockRepositoryImpl implements StockRepository {
   Future<List<ProductLog>> getProductLogs({
     required int page,
     required int limit,
-    required String? searchQuery,
-    required ProductLogType? filterType,
+    String? searchQuery,
+    ProductLogType? filterType,
+    String? productId,
   }) async {
     try {
-      // 1. Hitung range untuk pagination (Supabase menggunakan indeks berbasis 0)
-      // Contoh: page 1, limit 10 -> from: 0, to: 9
-      // Contoh: page 2, limit 10 -> from: 10, to: 19
       final int from = (page - 1) * limit;
       final int to = from + limit - 1;
 
-      // 2. Mulai builder query ke tabel 'product_logs'
-      // Anda juga bisa melakukan JOIN tabel relasi, misal: .select('*, products(name)')
-      var query = Supabase.instance.client.from('product_logs').select();
+      var query = _client.from('product_logs').select();
 
-      // 3. Terapkan Filtering (jika ada)
-      if (filterType != null) {
-        query = query.eq('action', filterType.name); // Contoh kolom: log_type
+      // 1. Filter berdasarkan productId (jika ada)
+      if (productId != null && productId.trim().isNotEmpty) {
+        query = query.eq('product_id', productId.trim());
       }
 
-      // 4. Terapkan Search Keyword (jika ada)
-      if (searchQuery != null && searchQuery.isNotEmpty) {
-        // .ilike digunakan untuk pencarian case-insensitive (tidak peduli huruf besar/kecil)
-        // Simbol '%' diartikan mengandung kata kunci tersebut
-        query = query.ilike('product_name', '%${searchQuery.trim()}%');
+      // 2. Terapkan Filtering aksi/tipe log (jika ada)
+      if (filterType != null && filterType != ProductLogType.all) {
+        final actionStr = switch (filterType) {
+          ProductLogType.stockIn => 'stock_in',
+          ProductLogType.stockOut => 'stock_out',
+          ProductLogType.update => 'update',
+          ProductLogType.create => 'create',
+          ProductLogType.delete => 'delete',
+          _ => null,
+        };
+        if (actionStr != null) {
+          query = query.ilike('action', '%$actionStr%');
+        }
       }
 
-      // 5. Urutkan berdasarkan waktu terbaru, lalu terapkan range pagination
+      // 3. Terapkan Search Keyword (jika ada)
+      if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+        final q = searchQuery.trim();
+        query = query.or('product_name.ilike.%$q%,pic.ilike.%$q%,note.ilike.%$q%');
+      }
+
+      // 4. Urutkan berdasarkan waktu terbaru, lalu terapkan range pagination
       final response = await query
           .order('created_at', ascending: false)
           .range(from, to);
 
-      return response.map((e) => ProductLogModel.fromJson(e)).toList();
+      return (response as List)
+          .map((e) => ProductLogModel.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (e) {
       return [];
     }

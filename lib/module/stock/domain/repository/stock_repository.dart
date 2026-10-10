@@ -6,8 +6,9 @@ abstract class StockRepository {
   Future<List<ProductLog>> getProductLogs({
     required int page,
     required int limit,
-    required String? searchQuery,
-    required ProductLogType? filterType,
+    String? searchQuery,
+    ProductLogType? filterType,
+    String? productId,
   });
 
   Future<bool> stockIn(StockTransactionDto dto);

@@ -42,7 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context.read<ProductProvider>().getProducts(),
       context.read<StockProvider>().getProductLogs(
         page: 1,
-        limit: 10,
+        limit: 5,
         searchQuery: '',
         filterType: null,
       ),

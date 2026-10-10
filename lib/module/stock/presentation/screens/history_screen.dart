@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/core/widgets/empty_state_widget.dart';
@@ -21,35 +22,59 @@ class _HistoryScreenState extends State<HistoryScreen> {
   final ValueNotifier<ProductLogType> _selectedFilter = ValueNotifier(
     ProductLogType.all,
   );
-  String _searchQuery = '';
   bool _showSearch = false;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  Timer? _debounceTimer;
 
   void _loadData({
-    int? page,
-    int limit = 10,
-    String? searchQuery,
-    ProductLogType? filterType,
+    int page = 1,
+    bool isRefresh = false,
   }) {
+    final filter = _selectedFilter.value == ProductLogType.all
+        ? null
+        : _selectedFilter.value;
     context.read<StockProvider>().getProductLogs(
-      page: page ?? 1,
-      limit: limit,
-      searchQuery: searchQuery ?? '',
-      filterType: filterType,
-    );
+          page: page,
+          limit: 10,
+          searchQuery: _searchController.text,
+          filterType: filter,
+          isRefresh: isRefresh,
+        );
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      final provider = context.read<StockProvider>();
+      if (provider.hasMore &&
+          !provider.isLoadingMore &&
+          !provider.isLoading) {
+        _loadData(page: provider.currentPage + 1);
+      }
+    }
+  }
+
+  void _onSearchChanged(String val) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 400), () {
+      _loadData(page: 1, isRefresh: true);
+    });
   }
 
   @override
   void initState() {
     super.initState();
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadData();
+      _loadData(page: 1, isRefresh: true);
     });
   }
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
+    _scrollController.removeListener(_onScroll);
     _searchController.dispose();
     _selectedFilter.dispose();
     _scrollController.dispose();
@@ -95,7 +120,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             _showSearch = !_showSearch;
                             if (!_showSearch) {
                               _searchController.clear();
-                              _searchQuery = '';
+                              _loadData(page: 1, isRefresh: true);
                             }
                           });
                         },
@@ -112,10 +137,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 padding: const EdgeInsets.only(left: 16, right: 16, bottom: 10),
                 child: TextField(
                   controller: _searchController,
-                  onChanged: (val) => setState(() => _searchQuery = val),
+                  onChanged: _onSearchChanged,
                   decoration: InputDecoration(
-                    hintText: 'Cari produk, SKU, atau pencatat...',
+                    hintText: 'Cari produk, catatan, atau pencatat...',
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, size: 18),
+                            onPressed: () {
+                              _searchController.clear();
+                              _loadData(page: 1, isRefresh: true);
+                            },
+                          )
+                        : null,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 10,
@@ -227,7 +261,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         ),
                         visualDensity: VisualDensity.compact,
                         onSelected: (selected) {
-                          if (selected) _selectedFilter.value = type;
+                          if (selected) {
+                            _selectedFilter.value = type;
+                            _loadData(page: 1, isRefresh: true);
+                          }
                         },
                       );
                     },
@@ -345,180 +382,189 @@ class _HistoryScreenState extends State<HistoryScreen> {
             const SizedBox(height: 14),
 
             // History Log List
-            ValueListenableBuilder<ProductLogType>(
-              valueListenable: _selectedFilter,
-              builder: (context, selectedFilter, _) {
-                return Selector<StockProvider, List<ProductLog>>(
-                  selector: (_, p) => p.productLogs,
-                  builder: (context, logs, _) {
-                    final query = _searchQuery.trim().toLowerCase();
-                    final filtered = logs.where((trx) {
-                      final matchesFilter =
-                          selectedFilter == ProductLogType.all ||
-                          trx.productLogType == selectedFilter;
-                      final matchesSearch =
-                          query.isEmpty ||
-                          trx.productName.toLowerCase().contains(query) ||
-                          trx.sku.toLowerCase().contains(query) ||
-                          trx.pic.toLowerCase().contains(query);
-                      return matchesFilter && matchesSearch;
-                    }).toList();
+            Expanded(
+              child: Consumer<StockProvider>(
+                builder: (context, stockProvider, _) {
+                  final logs = stockProvider.productLogs;
+                  final isLoading = stockProvider.isLoading;
+                  final isLoadingMore = stockProvider.isLoadingMore;
 
-                    if (filtered.isEmpty) {
-                      return const Expanded(
-                        child: EmptyStateWidget(
-                          icon: Icons.history_toggle_off_rounded,
-                          title: 'Tidak ada riwayat aktivitas',
-                          subtitle:
-                              'Belum ada catatan mutasi stok yang sesuai.',
-                        ),
-                      );
-                    }
+                  if (isLoading && logs.isEmpty) {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  }
 
-                    return Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: () async => _loadData(page: 1),
-                        child: ListView.separated(
-                          key: const PageStorageKey('history_screen'),
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: filtered.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 10),
-                          itemBuilder: (context, index) {
-                            final item = filtered[index];
-                            final isIn =
-                                item.productLogType == ProductLogType.stockIn;
-                            final isOut =
-                                item.productLogType == ProductLogType.stockOut;
-
-                            final Color iconBg = isIn
-                                ? AppColors.stockInBg
-                                : isOut
-                                ? AppColors.stockOutBg
-                                : AppColors.warningBg;
-                            final Color iconColor = isIn
-                                ? AppColors.stockIn
-                                : isOut
-                                ? AppColors.stockOut
-                                : AppColors.warning;
-                            final IconData iconData = isIn
-                                ? Icons.south_west_rounded
-                                : isOut
-                                ? Icons.north_east_rounded
-                                : Icons.balance_rounded;
-
-                            final String badgeLabel = isIn
-                                ? 'IN'
-                                : isOut
-                                ? 'OUT'
-                                : 'ADJ';
-
-                            return AppCard(
-                              padding: const EdgeInsets.all(12),
-                              borderRadius: 14,
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    width: 34,
-                                    height: 34,
-                                    decoration: BoxDecoration(
-                                      color: iconBg,
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(
-                                      iconData,
-                                      color: iconColor,
-                                      size: 18,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item.productName,
-                                          style: const TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w700,
-                                            color: AppColors.textPrimary,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          '${DateFormatter.dayHours(item.createdAt)} • ${item.pic.isEmpty ? "Kasir Utama" : item.pic}',
-                                          style: const TextStyle(
-                                            fontSize: 11,
-                                            color: AppColors.textMuted,
-                                          ),
-                                        ),
-                                        if ((item.note ?? '').isNotEmpty) ...[
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            'Catatan: ${item.note}',
-                                            style: const TextStyle(
-                                              fontSize: 11,
-                                              color: AppColors.textSecondary,
-                                              fontStyle: FontStyle.italic,
-                                            ),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                  ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 2,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: iconBg,
-                                          borderRadius: BorderRadius.circular(
-                                            6,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          badgeLabel,
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w800,
-                                            color: iconColor,
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${isIn
-                                            ? "+"
-                                            : isOut
-                                            ? "-"
-                                            : ""}${item.stockDifferent} pcs',
-                                        style: TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w800,
-                                          color: iconColor,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
+                  if (logs.isEmpty) {
+                    return RefreshIndicator(
+                      onRefresh: () async => _loadData(page: 1, isRefresh: true),
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Container(
+                          height: 300,
+                          alignment: Alignment.center,
+                          child: const EmptyStateWidget(
+                            icon: Icons.history_toggle_off_rounded,
+                            title: 'Tidak ada riwayat aktivitas',
+                            subtitle:
+                                'Belum ada catatan mutasi stok yang sesuai.',
+                          ),
                         ),
                       ),
                     );
-                  },
-                );
-              },
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () async => _loadData(page: 1, isRefresh: true),
+                    child: ListView.separated(
+                      key: const PageStorageKey('history_screen'),
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 30),
+                      itemCount: logs.length + (isLoadingMore ? 1 : 0),
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        if (index == logs.length) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 16.0),
+                            child: Center(
+                              child: SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                          );
+                        }
+
+                        final item = logs[index];
+                        final isIn =
+                            item.productLogType == ProductLogType.stockIn;
+                        final isOut =
+                            item.productLogType == ProductLogType.stockOut;
+
+                        final Color iconBg = isIn
+                            ? AppColors.stockInBg
+                            : isOut
+                                ? AppColors.stockOutBg
+                                : AppColors.warningBg;
+                        final Color iconColor = isIn
+                            ? AppColors.stockIn
+                            : isOut
+                                ? AppColors.stockOut
+                                : AppColors.warning;
+                        final IconData iconData = isIn
+                            ? Icons.south_west_rounded
+                            : isOut
+                                ? Icons.north_east_rounded
+                                : Icons.balance_rounded;
+
+                        final String badgeLabel = isIn
+                            ? 'IN'
+                            : isOut
+                                ? 'OUT'
+                                : 'ADJ';
+
+                        return AppCard(
+                          padding: const EdgeInsets.all(12),
+                          borderRadius: 14,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: BoxDecoration(
+                                  color: iconBg,
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                                child: Icon(
+                                  iconData,
+                                  color: iconColor,
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.productName,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.textPrimary,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '${DateFormatter.dayHours(item.createdAt)} • ${item.pic.isEmpty ? "Kasir Utama" : item.pic}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.textMuted,
+                                      ),
+                                    ),
+                                    if ((item.note ?? '').isNotEmpty) ...[
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        'Catatan: ${item.note}',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: AppColors.textSecondary,
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: iconBg,
+                                      borderRadius: BorderRadius.circular(
+                                        6,
+                                      ),
+                                    ),
+                                    child: Text(
+                                      badgeLabel,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: iconColor,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${isIn ? "+" : isOut ? "-" : ""}${item.stockDifferent} pcs',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w800,
+                                      color: iconColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
             ),
           ],
         ),
