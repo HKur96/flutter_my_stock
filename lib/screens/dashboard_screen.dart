@@ -17,7 +17,6 @@ import '../core/utils/smooth_page_route.dart';
 import '../core/widgets/app_card.dart';
 import '../module/stock/presentation/screens/stock_in_screen.dart';
 import '../module/stock/presentation/screens/stock_out_screen.dart';
-import '../module/product/presentation/screens/manage_category_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Function(int)? onNavigateToTab;
@@ -41,7 +40,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await Future.wait([
       context.read<ProductProvider>().getCategories(),
       context.read<ProductProvider>().getProducts(),
-      context.read<StockProvider>().getProductLogs(),
+      context.read<StockProvider>().getProductLogs(
+        page: 1,
+        limit: 10,
+        searchQuery: '',
+        filterType: null,
+      ),
     ]);
   }
 
@@ -53,8 +57,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: RefreshIndicator(
           onRefresh: _loadDatas,
           child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            key: const PageStorageKey('dashboard_screen'),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 12.0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -121,7 +128,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context, products, _) {
         final double totalValue = products.fold(
           0.0,
-          (sum, item) => sum + (item.recommendedSellingPrice * item.currentStock),
+          (sum, item) =>
+              sum + (item.recommendedSellingPrice * item.currentStock),
         );
         final int totalItemsCount = products.fold(
           0,
@@ -314,7 +322,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 GestureDetector(
                   onTap: () {
-                    if (widget.onNavigateToTab != null) widget.onNavigateToTab!(1);
+                    if (widget.onNavigateToTab != null)
+                      widget.onNavigateToTab!(1);
                   },
                   child: const Text(
                     'Lihat semua',
@@ -421,8 +430,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Selector<StockProvider, List<ProductLog>>(
       selector: (_, p) => p.productLogs,
       builder: (context, logs, _) {
-        final recentLogs = logs.take(5).toList();
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -440,7 +447,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 GestureDetector(
                   onTap: () {
-                    if (widget.onNavigateToTab != null) widget.onNavigateToTab!(2);
+                    if (widget.onNavigateToTab != null)
+                      widget.onNavigateToTab!(2);
                   },
                   child: const Text(
                     'Lihat semua',
@@ -454,7 +462,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             ),
             const SizedBox(height: 10),
-            if (recentLogs.isEmpty)
+            if (logs.isEmpty)
               AppCard(
                 padding: const EdgeInsets.all(16),
                 child: const Center(
@@ -471,35 +479,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: ListView.separated(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: recentLogs.length,
+                  itemCount: logs.length,
                   separatorBuilder: (_, __) =>
                       const Divider(height: 1, color: AppColors.borderSubtle),
                   itemBuilder: (context, index) {
-                    final item = recentLogs[index];
+                    final item = logs[index];
                     final isIn = item.productLogType == ProductLogType.stockIn;
-                    final isOut = item.productLogType == ProductLogType.stockOut;
+                    final isOut =
+                        item.productLogType == ProductLogType.stockOut;
 
                     final Color iconBg = isIn
                         ? AppColors.stockInBg
                         : isOut
-                            ? AppColors.stockOutBg
-                            : AppColors.warningBg;
+                        ? AppColors.stockOutBg
+                        : AppColors.warningBg;
                     final Color iconColor = isIn
                         ? AppColors.stockIn
                         : isOut
-                            ? AppColors.stockOut
-                            : AppColors.warning;
+                        ? AppColors.stockOut
+                        : AppColors.warning;
                     final IconData iconData = isIn
                         ? Icons.south_west_rounded
                         : isOut
-                            ? Icons.north_east_rounded
-                            : Icons.fact_check_outlined;
+                        ? Icons.north_east_rounded
+                        : Icons.fact_check_outlined;
 
                     final String qtyText = isIn
                         ? '+${item.stockDifferent} pcs'
                         : isOut
-                            ? '-${item.stockDifferent} pcs'
-                            : '${item.stockDifferent > 0 ? "+" : ""}${item.stockDifferent} pcs';
+                        ? '-${item.stockDifferent} pcs'
+                        : '${item.stockDifferent > 0 ? "+" : ""}${item.stockDifferent} pcs';
 
                     return Padding(
                       padding: const EdgeInsets.symmetric(

@@ -24,12 +24,27 @@ class _HistoryScreenState extends State<HistoryScreen> {
   String _searchQuery = '';
   bool _showSearch = false;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+
+  void _loadData({
+    int? page,
+    int limit = 10,
+    String? searchQuery,
+    ProductLogType? filterType,
+  }) {
+    context.read<StockProvider>().getProductLogs(
+      page: page ?? 1,
+      limit: limit,
+      searchQuery: searchQuery ?? '',
+      filterType: filterType,
+    );
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<StockProvider>().getProductLogs();
+      _loadData();
     });
   }
 
@@ -37,6 +52,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void dispose() {
     _searchController.dispose();
     _selectedFilter.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -49,7 +65,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
           children: [
             // Top App Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 12.0,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -66,7 +85,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     children: [
                       IconButton(
                         icon: Icon(
-                          _showSearch ? Icons.close_rounded : Icons.search_rounded,
+                          _showSearch
+                              ? Icons.close_rounded
+                              : Icons.search_rounded,
                           size: 22,
                         ),
                         onPressed: () {
@@ -95,7 +116,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   decoration: InputDecoration(
                     hintText: 'Cari produk, SKU, atau pencatat...',
                     prefixIcon: const Icon(Icons.search_rounded, size: 20),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
                   ),
                 ),
               ),
@@ -110,14 +134,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.surfaceContainer,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: const Row(
                           children: [
-                            Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary),
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              size: 14,
+                              color: AppColors.textSecondary,
+                            ),
                             SizedBox(width: 6),
                             Text(
                               'Semua Riwayat',
@@ -167,7 +198,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     itemBuilder: (context, index) {
                       final type = filterList[index];
                       final isSelected = selectedFilter == type;
-                      final label = type == ProductLogType.update ? 'Opname' : type.displayName;
+                      final label = type == ProductLogType.update
+                          ? 'Opname'
+                          : type.displayName;
 
                       return ChoiceChip(
                         label: Text(label),
@@ -175,13 +208,20 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         selectedColor: AppColors.primary,
                         backgroundColor: AppColors.surfaceCard,
                         labelStyle: TextStyle(
-                          color: isSelected ? Colors.white : AppColors.textSecondary,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected
+                              ? Colors.white
+                              : AppColors.textSecondary,
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
                           fontSize: 12,
                         ),
                         side: isSelected
                             ? BorderSide.none
-                            : const BorderSide(color: AppColors.border, width: 1),
+                            : const BorderSide(
+                                color: AppColors.border,
+                                width: 1,
+                              ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(20),
                         ),
@@ -216,7 +256,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: AppCard(
-                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 12,
+                      horizontal: 16,
+                    ),
                     borderRadius: 14,
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -225,7 +268,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           children: [
                             const Text(
                               'Total Masuk',
-                              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
@@ -238,12 +284,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ),
                           ],
                         ),
-                        Container(height: 24, width: 1, color: AppColors.borderSubtle),
+                        Container(
+                          height: 24,
+                          width: 1,
+                          color: AppColors.borderSubtle,
+                        ),
                         Column(
                           children: [
                             const Text(
                               'Total Keluar',
-                              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
@@ -256,12 +309,19 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ),
                           ],
                         ),
-                        Container(height: 24, width: 1, color: AppColors.borderSubtle),
+                        Container(
+                          height: 24,
+                          width: 1,
+                          color: AppColors.borderSubtle,
+                        ),
                         Column(
                           children: [
                             const Text(
                               'Net Aliran',
-                              style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Text(
@@ -269,7 +329,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
-                                color: netFlow >= 0 ? AppColors.stockIn : AppColors.stockOut,
+                                color: netFlow >= 0
+                                    ? AppColors.stockIn
+                                    : AppColors.stockOut,
                               ),
                             ),
                           ],
@@ -291,9 +353,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   builder: (context, logs, _) {
                     final query = _searchQuery.trim().toLowerCase();
                     final filtered = logs.where((trx) {
-                      final matchesFilter = selectedFilter == ProductLogType.all ||
+                      final matchesFilter =
+                          selectedFilter == ProductLogType.all ||
                           trx.productLogType == selectedFilter;
-                      final matchesSearch = query.isEmpty ||
+                      final matchesSearch =
+                          query.isEmpty ||
                           trx.productName.toLowerCase().contains(query) ||
                           trx.sku.toLowerCase().contains(query) ||
                           trx.pic.toLowerCase().contains(query);
@@ -305,44 +369,50 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         child: EmptyStateWidget(
                           icon: Icons.history_toggle_off_rounded,
                           title: 'Tidak ada riwayat aktivitas',
-                          subtitle: 'Belum ada catatan mutasi stok yang sesuai.',
+                          subtitle:
+                              'Belum ada catatan mutasi stok yang sesuai.',
                         ),
                       );
                     }
 
                     return Expanded(
                       child: RefreshIndicator(
-                        onRefresh: () => context.read<StockProvider>().getProductLogs(),
+                        onRefresh: () async => _loadData(page: 1),
                         child: ListView.separated(
+                          key: const PageStorageKey('history_screen'),
+                          controller: _scrollController,
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: filtered.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 10),
+                          separatorBuilder: (_, __) =>
+                              const SizedBox(height: 10),
                           itemBuilder: (context, index) {
                             final item = filtered[index];
-                            final isIn = item.productLogType == ProductLogType.stockIn;
-                            final isOut = item.productLogType == ProductLogType.stockOut;
+                            final isIn =
+                                item.productLogType == ProductLogType.stockIn;
+                            final isOut =
+                                item.productLogType == ProductLogType.stockOut;
 
                             final Color iconBg = isIn
                                 ? AppColors.stockInBg
                                 : isOut
-                                    ? AppColors.stockOutBg
-                                    : AppColors.warningBg;
+                                ? AppColors.stockOutBg
+                                : AppColors.warningBg;
                             final Color iconColor = isIn
                                 ? AppColors.stockIn
                                 : isOut
-                                    ? AppColors.stockOut
-                                    : AppColors.warning;
+                                ? AppColors.stockOut
+                                : AppColors.warning;
                             final IconData iconData = isIn
                                 ? Icons.south_west_rounded
                                 : isOut
-                                    ? Icons.north_east_rounded
-                                    : Icons.balance_rounded;
+                                ? Icons.north_east_rounded
+                                : Icons.balance_rounded;
 
                             final String badgeLabel = isIn
                                 ? 'IN'
                                 : isOut
-                                    ? 'OUT'
-                                    : 'ADJ';
+                                ? 'OUT'
+                                : 'ADJ';
 
                             return AppCard(
                               padding: const EdgeInsets.all(12),
@@ -357,12 +427,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                       color: iconBg,
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: Icon(iconData, color: iconColor, size: 18),
+                                    child: Icon(
+                                      iconData,
+                                      color: iconColor,
+                                      size: 18,
+                                    ),
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           item.productName,
@@ -406,7 +481,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         ),
                                         decoration: BoxDecoration(
                                           color: iconBg,
-                                          borderRadius: BorderRadius.circular(6),
+                                          borderRadius: BorderRadius.circular(
+                                            6,
+                                          ),
                                         ),
                                         child: Text(
                                           badgeLabel,
@@ -419,7 +496,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '${isIn ? "+" : isOut ? "-" : ""}${item.stockDifferent} pcs',
+                                        '${isIn
+                                            ? "+"
+                                            : isOut
+                                            ? "-"
+                                            : ""}${item.stockDifferent} pcs',
                                         style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w800,

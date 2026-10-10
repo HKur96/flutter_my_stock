@@ -288,6 +288,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 padding: EdgeInsets.zero,
                 borderRadius: 16,
                 child: ListView.separated(
+                  key: const PageStorageKey('product_list'),
                   itemCount: filtered.length,
                   separatorBuilder: (_, __) =>
                       const Divider(height: 1, color: AppColors.borderSubtle),

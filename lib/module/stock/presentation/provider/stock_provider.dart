@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/core/config/global.dart';
 import 'package:flutter_catat_stok/core/theme/app_theme.dart';
 import 'package:flutter_catat_stok/module/stock/domain/dto/stock_transaction_dto.dart';
@@ -15,12 +16,22 @@ class StockProvider with ChangeNotifier {
   List<ProductLog> get productLogs => _productLogs;
   bool get isLoading => _isLoading;
 
-  Future<void> getProductLogs() async {
+  Future<void> getProductLogs({
+    required int page,
+    required int limit,
+    required String? searchQuery,
+    required ProductLogType? filterType,
+  }) async {
     try {
       _isLoading = true;
       notifyListeners();
 
-      final response = await _stockRepository.getProductLogs();
+      final response = await _stockRepository.getProductLogs(
+        page: page,
+        limit: limit,
+        searchQuery: searchQuery,
+        filterType: filterType,
+      );
 
       _productLogs = response;
     } catch (e) {

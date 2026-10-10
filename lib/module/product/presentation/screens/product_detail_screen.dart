@@ -34,7 +34,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().selectedProduct = widget.selectedProduct;
-      context.read<StockProvider>().getProductLogs();
+      context.read<StockProvider>().getProductLogs(
+        page: 1,
+        limit: 10,
+        filterType: null,
+        searchQuery: widget.selectedProduct.name,
+      );
     });
   }
 
