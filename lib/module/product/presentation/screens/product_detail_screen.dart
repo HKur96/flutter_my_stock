@@ -706,8 +706,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           cancelText: 'Batal',
           confirmText: 'Hapus',
           onConfirm: () async {
+            final navigator = Navigator.of(context);
             if (await context.read<ProductProvider>().deleteProduct(p.id)) {
-              Navigator.of(context).pop();
+              navigator.pop();
             }
           },
         ),

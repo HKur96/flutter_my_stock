@@ -1,8 +1,10 @@
+import 'package:flutter_catat_stok/core/config/enum.dart';
+
 class Product {
   final String id;
   final String name;
   final String sku;
-  final String unit;
+  final UnitType unit;
   final String categoryId;
   final String categoryName;
   final num purchasePrice;

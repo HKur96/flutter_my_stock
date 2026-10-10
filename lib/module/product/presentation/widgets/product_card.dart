@@ -100,7 +100,7 @@ class ProductCard extends StatelessWidget {
                         ),
                       ),
                       TextSpan(
-                        text: product.unit,
+                        text: product.unit.name,
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textMuted,

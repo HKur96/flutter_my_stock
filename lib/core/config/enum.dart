@@ -64,3 +64,26 @@ enum StockTransactionType {
     }
   }
 }
+
+enum UnitType { pcs, unit, bungkus, rim, box, kg, liter;
+  static UnitType fromValue(String value) {
+    switch (value.toUpperCase()) {
+      case 'PCS':
+        return UnitType.pcs;
+      case 'UNIT':
+        return UnitType.unit;
+      case 'BUNGKUS':
+        return UnitType.bungkus;
+      case 'RIM':
+        return UnitType.rim;
+      case 'BOX':
+        return UnitType.box;
+      case 'KG':
+        return UnitType.kg;
+      case 'LITER':
+        return UnitType.liter;
+      default:
+        return UnitType.pcs;
+    }
+  }
+   }

@@ -27,24 +27,15 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   late TextEditingController _skuController;
   late TextEditingController _nameController;
   late TextEditingController _stockController;
-  late TextEditingController _minStockController;
   late TextEditingController _buyPriceController;
   late TextEditingController _sellPriceController;
   late TextEditingController _descriptionController;
 
   final ValueNotifier<String?> _selectedCategory = ValueNotifier<String?>(null);
-  final ValueNotifier<String> _selectedUnit = ValueNotifier<String>('Pcs');
-  int _minStock = 15;
-
-  final List<String> _units = [
-    'Pcs',
-    'Unit',
-    'Bungkus',
-    'Rim',
-    'Box',
-    'Kg',
-    'Liter',
-  ];
+  final ValueNotifier<UnitType> _selectedUnit = ValueNotifier<UnitType>(
+    UnitType.pcs,
+  );
+  final ValueNotifier<int> _minStock = ValueNotifier(4);
 
   @override
   void initState() {
@@ -55,10 +46,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _stockController = TextEditingController(
       text: p?.currentStock.toString() ?? '0',
     );
-    _minStock = p?.minimumStock ?? 15;
-    _minStockController = TextEditingController(
-      text: _minStock.toString(),
-    );
+    _minStock.value = p?.minimumStock ?? 4;
     _buyPriceController = TextEditingController(
       text: p != null ? p.purchasePrice.toInt().toString() : '',
     );
@@ -70,11 +58,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
       _selectedCategory.value = p.categoryName.trim().isNotEmpty
           ? p.categoryName
           : null;
-      _selectedUnit.value = _units.contains(p.unit) ? p.unit : 'Pcs';
+      _selectedUnit.value = p.unit;
     }
-
-    _buyPriceController.addListener(() => setState(() {}));
-    _sellPriceController.addListener(() => setState(() {}));
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkCategoryAndInit();
@@ -86,12 +71,12 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _skuController.dispose();
     _nameController.dispose();
     _stockController.dispose();
-    _minStockController.dispose();
     _buyPriceController.dispose();
     _sellPriceController.dispose();
     _descriptionController.dispose();
     _selectedCategory.dispose();
     _selectedUnit.dispose();
+    _minStock.dispose();
     super.dispose();
   }
 
@@ -143,8 +128,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         categoryId: selectedCategoryId,
         categoryName: _selectedCategory.value!,
         currentStock: int.tryParse(_stockController.text) ?? 0,
-        minimumStock: _minStock,
-        purchasePrice: int.parse(_buyPriceController.text.replaceAll('.', '')).toDouble(),
+        minimumStock: _minStock.value,
+        purchasePrice: int.parse(
+          _buyPriceController.text.replaceAll('.', ''),
+        ).toDouble(),
         recommendedSellingPrice: int.parse(
           _sellPriceController.text.replaceAll('.', ''),
         ).toDouble(),
@@ -176,8 +163,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         categoryId: selectedCategoryId,
         categoryName: _selectedCategory.value!,
         currentStock: int.tryParse(_stockController.text) ?? 0,
-        minimumStock: _minStock,
-        purchasePrice: int.parse(_buyPriceController.text.replaceAll('.', '')).toDouble(),
+        minimumStock: _minStock.value,
+        purchasePrice: int.parse(
+          _buyPriceController.text.replaceAll('.', ''),
+        ).toDouble(),
         recommendedSellingPrice: int.parse(
           _sellPriceController.text.replaceAll('.', ''),
         ).toDouble(),
@@ -195,10 +184,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   @override
   Widget build(BuildContext context) {
     final isEdit = widget.product != null;
-    final buyPrice = double.tryParse(_buyPriceController.text.replaceAll('.', '')) ?? 0.0;
-    final sellPrice = double.tryParse(_sellPriceController.text.replaceAll('.', '')) ?? 0.0;
-    final margin = sellPrice - buyPrice;
-    final marginPercent = buyPrice > 0 ? ((margin / buyPrice) * 100).toInt() : 0;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -226,7 +211,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                     backgroundColor: AppColors.surfaceContainer,
                     side: BorderSide.none,
                   ),
-                  child: const Text('Batal', style: TextStyle(color: AppColors.textPrimary)),
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(color: AppColors.textPrimary),
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -239,20 +227,27 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                       onPressed: isLoading
                           ? null
                           : isEdit
-                              ? _handleEditProduct
-                              : _handleAddProduct,
+                          ? _handleEditProduct
+                          : _handleAddProduct,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
                         minimumSize: const Size(double.infinity, 48),
                       ),
                       icon: isLoading
                           ? const SizedBox.shrink()
-                          : const Icon(Icons.check_circle_outline_rounded, color: Colors.white, size: 20),
+                          : const Icon(
+                              Icons.check_circle_outline_rounded,
+                              color: Colors.white,
+                              size: 20,
+                            ),
                       label: isLoading
                           ? const SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              ),
                             )
                           : Text(isEdit ? 'Simpan Perubahan' : 'Simpan Produk'),
                     );
@@ -274,143 +269,280 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               _buildFieldLabel('Nama Produk *'),
               TextFormField(
                 controller: _nameController,
+                onTapOutside: (_) =>
+                    FocusManager.instance.primaryFocus?.unfocus(),
                 decoration: const InputDecoration(
                   hintText: 'Indomie Goreng 85g',
                 ),
-                validator: (val) =>
-                    val == null || val.trim().isEmpty ? 'Nama produk wajib diisi' : null,
+                validator: (val) => val == null || val.trim().isEmpty
+                    ? 'Nama produk wajib diisi'
+                    : null,
               ),
               const SizedBox(height: 14),
 
-              // Category Field
-              _buildFieldLabel('Kategori *'),
-              ValueListenableBuilder<String?>(
-                valueListenable: _selectedCategory,
-                builder: (context, catVal, _) {
-                  final categories = context.watch<ProductProvider>().categories;
-                  return DropdownButtonFormField<String>(
-                    value: catVal,
-                    isExpanded: true,
-                    items: categories.map((c) {
-                      return DropdownMenuItem(
-                        value: c.name,
-                        child: Text(c.name, overflow: TextOverflow.ellipsis),
-                      );
-                    }).toList(),
-                    onChanged: (val) => _selectedCategory.value = val,
-                    validator: (val) => val == null ? 'Pilih kategori' : null,
-                  );
-                },
-              ),
-              const SizedBox(height: 14),
-
-              // SKU Field
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                spacing: 14,
                 children: [
-                  _buildFieldLabel('SKU (Kode Produk)'),
-                  const Text('Opsional', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
-                ],
-              ),
-              TextFormField(
-                controller: _skuController,
-                decoration: InputDecoration(
-                  hintText: 'MKN-001',
-                  suffixIcon: IconButton(
-                    icon: const Icon(Icons.auto_fix_high_rounded, size: 20, color: AppColors.primary),
-                    onPressed: () {
-                      final generated = 'SKU-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-                      _skuController.text = generated;
-                    },
-                  ),
-                ),
-              ),
-              const SizedBox(height: 14),
-
-              // Buy Price Field
-              _buildFieldLabel('Harga Beli (Modal) *'),
-              TextFormField(
-                controller: _buyPriceController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [CurrencyInputFormatter()],
-                decoration: const InputDecoration(
-                  prefixText: 'Rp ',
-                  hintText: '0',
-                ),
-                validator: (val) =>
-                    val == null || val.trim().isEmpty ? 'Harga beli wajib diisi' : null,
-              ),
-              const SizedBox(height: 14),
-
-              // Recommended Sell Price Field
-              _buildFieldLabel('Harga Jual Disarankan *'),
-              TextFormField(
-                controller: _sellPriceController,
-                keyboardType: TextInputType.number,
-                inputFormatters: [CurrencyInputFormatter()],
-                decoration: const InputDecoration(
-                  prefixText: 'Rp ',
-                  hintText: '0',
-                ),
-                validator: (val) =>
-                    val == null || val.trim().isEmpty ? 'Harga jual wajib diisi' : null,
-              ),
-              const SizedBox(height: 10),
-
-              // Estimasi Margin Pill Box (Match Stitch 08_tambah_produk)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainer,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Row(
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.trending_up_rounded, size: 16, color: AppColors.stockIn),
-                        SizedBox(width: 6),
-                        Text(
-                          'Estimasi Margin:',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.stockIn,
-                          ),
+                        // Category Field
+                        _buildFieldLabel('Kategori *'),
+                        ValueListenableBuilder<String?>(
+                          valueListenable: _selectedCategory,
+                          builder: (context, catVal, _) {
+                            final categories = context
+                                .watch<ProductProvider>()
+                                .categories;
+                            return DropdownButtonFormField<String>(
+                              value: catVal,
+                              isExpanded: true,
+                              items: categories.map((c) {
+                                return DropdownMenuItem(
+                                  value: c.name,
+                                  child: Text(
+                                    c.name,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                );
+                              }).toList(),
+                              onChanged: (val) => _selectedCategory.value = val,
+                              validator: (val) =>
+                                  val == null ? 'Pilih kategori' : null,
+                            );
+                          },
                         ),
                       ],
                     ),
-                    Row(
+                  ),
+                  Expanded(
+                    child: Column(
                       children: [
-                        Text(
-                          CurrencyFormatter.format(margin),
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.textPrimary,
-                          ),
+                        // SKU Field
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildFieldLabel('SKU (Kode Produk)'),
+                            const Text(
+                              'Opsional',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.stockInBg,
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '+$marginPercent%',
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.stockIn,
+                        TextFormField(
+                          controller: _skuController,
+                          onTapOutside: (_) =>
+                              FocusManager.instance.primaryFocus?.unfocus(),
+                          decoration: InputDecoration(
+                            hintText: 'MKN-001',
+                            suffixIcon: IconButton(
+                              icon: const Icon(
+                                Icons.qr_code_scanner_rounded,
+                                size: 20,
+                                color: AppColors.primary,
+                              ),
+                              onPressed: () {
+                                final generated =
+                                    'SKU-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
+                                _skuController.text = generated;
+                              },
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+
+              Row(
+                spacing: 14,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Buy Price Field
+                        _buildFieldLabel('Harga Beli (Modal) *'),
+                        TextFormField(
+                          controller: _buyPriceController,
+                          keyboardType: TextInputType.number,
+                          onTapOutside: (_) =>
+                              FocusManager.instance.primaryFocus?.unfocus(),
+                          inputFormatters: [CurrencyInputFormatter()],
+                          decoration: const InputDecoration(
+                            prefixText: 'Rp ',
+                            hintText: '0',
+                          ),
+                          validator: (val) => val == null || val.trim().isEmpty
+                              ? 'Harga beli wajib diisi'
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Recommended Sell Price Field
+                        _buildFieldLabel('Harga Jual Disarankan *'),
+                        TextFormField(
+                          controller: _sellPriceController,
+                          keyboardType: TextInputType.number,
+                          onTapOutside: (_) =>
+                              FocusManager.instance.primaryFocus?.unfocus(),
+                          inputFormatters: [CurrencyInputFormatter()],
+                          decoration: const InputDecoration(
+                            prefixText: 'Rp ',
+                            hintText: '0',
+                          ),
+                          validator: (val) => val == null || val.trim().isEmpty
+                              ? 'Harga jual wajib diisi'
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+
+              // Estimasi Margin Pill Box (Match Stitch 08_tambah_produk)
+              ListenableBuilder(
+                listenable: Listenable.merge([
+                  _buyPriceController,
+                  _sellPriceController,
+                ]),
+                builder: (context, _) {
+                  final buyPrice =
+                      double.tryParse(
+                        _buyPriceController.text.replaceAll('.', ''),
+                      ) ??
+                      0.0;
+                  final sellPrice =
+                      double.tryParse(
+                        _sellPriceController.text.replaceAll('.', ''),
+                      ) ??
+                      0.0;
+                  final margin = sellPrice - buyPrice;
+                  final marginPercent = buyPrice > 0
+                      ? ((margin / buyPrice) * 100).toInt()
+                      : 0;
+
+                  return Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceContainer,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.trending_up_rounded,
+                              size: 16,
+                              color: AppColors.stockIn,
+                            ),
+                            SizedBox(width: 6),
+                            Text(
+                              'Estimasi Margin:',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.stockIn,
+                              ),
+                            ),
+                          ],
+                        ),
+                        Row(
+                          children: [
+                            Text(
+                              CurrencyFormatter.format(margin),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.stockInBg,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                '+$marginPercent%',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.stockIn,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildFieldLabel('Satuan Barang *'),
+              ValueListenableBuilder<UnitType>(
+                valueListenable: _selectedUnit,
+                builder: (context, selectedUnit, child) {
+                  return Row(
+                    children: [
+                      Expanded(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            spacing: 8,
+                            children: UnitType.values.map((x) {
+                              final selected = x == selectedUnit;
+                              return ChoiceChip(
+                                selected: selected,
+                                onSelected: (value) {
+                                  _selectedUnit.value = x;
+                                },
+                                label: Text(
+                                  x.name,
+                                  style: TextStyle(
+                                    color: selected
+                                        ? Colors.white
+                                        : Colors.black,
+                                  ),
+                                ),
+                                selectedColor: AppColors.primary,
+                                disabledColor: Colors.white,
+                                side: selected
+                                    ? null
+                                    : BorderSide(color: Colors.grey.shade300),
+                                showCheckmark: false,
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 16),
 
@@ -431,14 +563,20 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                     const SizedBox(height: 2),
                     const Text(
                       'Pemberitahuan saat stok mencapai batas ini',
-                      style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textMuted,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
                         InkWell(
                           onTap: () {
-                            if (_minStock > 1) setState(() => _minStock--);
+                            final value = _minStock.value;
+                            if (value > 1) {
+                              _minStock.value = value - 1;
+                            }
                           },
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
@@ -448,32 +586,46 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               color: AppColors.surfaceContainer,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.remove_rounded, color: AppColors.textPrimary),
+                            child: const Icon(
+                              Icons.remove_rounded,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 10),
-                        Expanded(
-                          child: Container(
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceContainer,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Center(
-                              child: Text(
-                                '$_minStock  ${_selectedUnit.value}',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.textPrimary,
+                        ListenableBuilder(
+                          listenable: Listenable.merge([
+                            _minStock,
+                            _selectedUnit,
+                          ]),
+                          builder: (_, __) {
+                            return Expanded(
+                              child: Container(
+                                height: 44,
+                                decoration: BoxDecoration(
+                                  color: AppColors.surfaceContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${_minStock.value}  ${_selectedUnit.value.name}',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.textPrimary,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
+                            );
+                          },
                         ),
                         const SizedBox(width: 10),
                         InkWell(
-                          onTap: () => setState(() => _minStock++),
+                          onTap: () {
+                            final value = _minStock.value;
+                            _minStock.value = value + 1;
+                          },
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
                             width: 48,
@@ -482,7 +634,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                               color: AppColors.surfaceContainer,
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.add_rounded, color: AppColors.textPrimary),
+                            child: const Icon(
+                              Icons.add_rounded,
+                              color: AppColors.textPrimary,
+                            ),
                           ),
                         ),
                       ],
@@ -513,7 +668,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
                               color: AppColors.primary,
                               borderRadius: BorderRadius.circular(10),
@@ -530,13 +688,20 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      TextFormField(
-                        controller: _stockController,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          suffixText: _selectedUnit.value,
-                          hintText: '0',
-                        ),
+                      ValueListenableBuilder<UnitType>(
+                        valueListenable: _selectedUnit,
+                        builder: (context, selectedUnit, child) {
+                          return TextFormField(
+                            controller: _stockController,
+                            keyboardType: TextInputType.number,
+                            onTapOutside: (_) =>
+                                FocusManager.instance.primaryFocus?.unfocus(),
+                            decoration: InputDecoration(
+                              suffixText: selectedUnit.name,
+                              hintText: '0',
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/date_formatter.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_shimmer.dart';
 
 class HistoryScreen extends StatefulWidget {
   const HistoryScreen({super.key});
@@ -240,6 +241,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         label: Text(label),
                         selected: isSelected,
                         selectedColor: AppColors.primary,
+                        showCheckmark: false,
                         backgroundColor: AppColors.surfaceCard,
                         labelStyle: TextStyle(
                           color: isSelected
@@ -337,7 +339,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             ),
                             const SizedBox(height: 2),
                             Text(
-                              '-$totalOut pcs',
+                              '$totalOut pcs',
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
@@ -390,8 +392,51 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   final isLoadingMore = stockProvider.isLoadingMore;
 
                   if (isLoading && logs.isEmpty) {
-                    return const Center(
-                      child: CircularProgressIndicator(),
+                    return ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 30),
+                      itemCount: 6,
+                      separatorBuilder: (_, __) => const SizedBox(height: 10),
+                      itemBuilder: (context, index) {
+                        return AppCard(
+                          padding: const EdgeInsets.all(12),
+                          borderRadius: 14,
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppShimmer.rectangle(
+                                width: 34,
+                                height: 34,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    AppShimmer.rectangle(
+                                      width: 140,
+                                      height: 14,
+                                    ),
+                                    const SizedBox(height: 6),
+                                    AppShimmer.rectangle(
+                                      width: 100,
+                                      height: 11,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  AppShimmer.rectangle(width: 32, height: 14),
+                                  const SizedBox(height: 6),
+                                  AppShimmer.rectangle(width: 50, height: 14),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     );
                   }
 
@@ -424,16 +469,44 @@ class _HistoryScreenState extends State<HistoryScreen> {
                       separatorBuilder: (_, __) => const SizedBox(height: 10),
                       itemBuilder: (context, index) {
                         if (index == logs.length) {
-                          return const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 16.0),
-                            child: Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                          return AppCard(
+                            padding: const EdgeInsets.all(12),
+                            borderRadius: 14,
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AppShimmer.rectangle(
+                                  width: 34,
+                                  height: 34,
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
-                              ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      AppShimmer.rectangle(
+                                        width: 130,
+                                        height: 14,
+                                      ),
+                                      const SizedBox(height: 6),
+                                      AppShimmer.rectangle(
+                                        width: 90,
+                                        height: 11,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    AppShimmer.rectangle(width: 30, height: 14),
+                                    const SizedBox(height: 6),
+                                    AppShimmer.rectangle(width: 45, height: 14),
+                                  ],
+                                ),
+                              ],
                             ),
                           );
                         }
@@ -548,7 +621,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${isIn ? "+" : isOut ? "-" : ""}${item.stockDifferent} pcs',
+                                    '${isIn ? "+" : isOut ? "" : ""}${item.stockDifferent} pcs',
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w800,

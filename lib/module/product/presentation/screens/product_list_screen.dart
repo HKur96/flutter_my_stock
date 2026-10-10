@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../core/utils/smooth_page_route.dart';
 import '../../../../core/widgets/app_card.dart';
+import '../../../../core/widgets/app_shimmer.dart';
 import 'add_edit_product_screen.dart';
 import 'product_detail_screen.dart';
 
@@ -194,6 +195,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 label: Text(cat),
                 selected: isSelected,
                 selectedColor: AppColors.primary,
+                showCheckmark: false,
                 backgroundColor: AppColors.surfaceCard,
                 labelStyle: TextStyle(
                   color: isSelected ? Colors.white : AppColors.textSecondary,
@@ -324,8 +326,46 @@ class _ProductListScreenState extends State<ProductListScreen> {
           final isLoadingMore = productProvider.isLoadingMoreProduct;
 
           if (isLoading && products.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(),
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: AppCard(
+                padding: EdgeInsets.zero,
+                borderRadius: 16,
+                child: ListView.separated(
+                  itemCount: 6,
+                  separatorBuilder: (_, __) => const Divider(
+                    height: 1,
+                    color: AppColors.borderSubtle,
+                  ),
+                  itemBuilder: (context, index) {
+                    return Padding(
+                      padding: const EdgeInsets.all(14.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AppShimmer.rectangle(width: 140, height: 14),
+                                const SizedBox(height: 6),
+                                AppShimmer.rectangle(width: 110, height: 12),
+                              ],
+                            ),
+                          ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              AppShimmer.rectangle(width: 60, height: 14),
+                              const SizedBox(height: 6),
+                              AppShimmer.rectangle(width: 70, height: 12),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
             );
           }
 
@@ -363,16 +403,29 @@ class _ProductListScreenState extends State<ProductListScreen> {
                       const Divider(height: 1, color: AppColors.borderSubtle),
                   itemBuilder: (context, index) {
                     if (index == products.length) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16.0),
-                        child: Center(
-                          child: SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
+                      return Padding(
+                        padding: const EdgeInsets.all(14.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  AppShimmer.rectangle(width: 130, height: 14),
+                                  const SizedBox(height: 6),
+                                  AppShimmer.rectangle(width: 100, height: 12),
+                                ],
+                              ),
                             ),
-                          ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                AppShimmer.rectangle(width: 55, height: 14),
+                                const SizedBox(height: 6),
+                                AppShimmer.rectangle(width: 65, height: 12),
+                              ],
+                            ),
+                          ],
                         ),
                       );
                     }

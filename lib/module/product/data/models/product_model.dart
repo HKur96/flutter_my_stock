@@ -1,3 +1,4 @@
+import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 
 class ProductModel extends Product {
@@ -41,7 +42,7 @@ class ProductModel extends Product {
       id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
       sku: json['sku'] ?? '',
-      unit: unitVal,
+      unit: UnitType.fromValue(json['unit'].toString().trim()),
       categoryId: catId,
       categoryName: catName,
       purchasePrice: json['purchase_price'] ?? 0,

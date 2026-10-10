@@ -188,7 +188,7 @@ class _StockInScreenState extends State<StockInScreen> {
           builder: (context, selectedProduct, child) {
             final products = context.watch<ProductProvider>().products;
             final currentStock = _selectedProduct.value?.currentStock ?? 0;
-            final unit = _selectedProduct.value?.unit ?? 'pcs';
+            final unit = _selectedProduct.value?.unit ?? UnitType.pcs;
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,13 +198,13 @@ class _StockInScreenState extends State<StockInScreen> {
                   selectedProduct,
                   products,
                   currentStock,
-                  unit,
+                  unit.name,
                 ),
                 const SizedBox(height: 16),
 
                 if (selectedProduct != null) ...[
                   // Quantity Input Card (Match Stitch 07_stok_masuk)
-                  _buildQuantityInput(unit),
+                  _buildQuantityInput(unit.name),
                   const SizedBox(height: 16),
 
                   // Price Input Card
@@ -216,7 +216,7 @@ class _StockInScreenState extends State<StockInScreen> {
                   const SizedBox(height: 16),
 
                   // Automatic Summary Card (Match Stitch 07_stok_masuk)
-                  _buildSummaryCard(selectedProduct, unit),
+                  _buildSummaryCard(selectedProduct, unit.name),
                 ],
               ],
             );
@@ -485,6 +485,7 @@ class _StockInScreenState extends State<StockInScreen> {
           TextFormField(
             controller: _priceController,
             keyboardType: TextInputType.number,
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             decoration: const InputDecoration(prefixText: 'Rp ', hintText: '0'),
             inputFormatters: [CurrencyInputFormatter()],
           ),
@@ -510,6 +511,7 @@ class _StockInScreenState extends State<StockInScreen> {
           const SizedBox(height: 8),
           TextFormField(
             controller: _noteController,
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             decoration: const InputDecoration(
               hintText: 'cth: Kulakan Toko Grosir Jaya Makmur, faktur #...',
               prefixIcon: Icon(Icons.store_outlined, size: 20),
