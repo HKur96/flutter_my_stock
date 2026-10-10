@@ -2,6 +2,12 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 class CurrencyInputFormatter extends TextInputFormatter {
+  static String formatNumber(num value) {
+    if (value == 0) return '';
+    final formatter = NumberFormat('#,###', 'id_ID');
+    return formatter.format(value.toInt());
+  }
+
   @override
   TextEditingValue formatEditUpdate(
     TextEditingValue oldValue,

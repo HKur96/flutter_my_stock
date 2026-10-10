@@ -35,7 +35,8 @@ class StockRepositoryImpl implements StockRepository {
         },
       );
       return true;
-    } catch (e) {
+    } catch (e, s) {
+      print('err stock in $e\n$s');
       return false;
     }
   }

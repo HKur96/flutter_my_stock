@@ -149,11 +149,9 @@ class ProductRepositoryImpl implements ProductRepository {
       // untuk menghindari konflik dengan trigger DB pada product_logs.
       await _client.from('products').update({'is_active': false}).eq('id', id);
       return true;
-    } on PostgrestException catch (e, s) {
-      print('err sup $e\n$s');
+    } on PostgrestException catch (e) {
       return false;
     } catch (e) {
-      print('err delete $e');
       return false;
     }
   }
