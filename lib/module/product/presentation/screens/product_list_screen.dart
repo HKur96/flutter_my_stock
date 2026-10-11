@@ -156,7 +156,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
             ),
             child: IconButton(
               icon: const Icon(
-                Icons.qr_code_scanner_rounded,
+                Icons.camera_alt_outlined,
                 size: 24,
                 color: AppColors.primary,
               ),

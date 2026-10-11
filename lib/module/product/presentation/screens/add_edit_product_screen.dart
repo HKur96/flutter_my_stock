@@ -38,7 +38,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   late TextEditingController _descriptionController;
 
   final ValueNotifier<String?> _selectedCategory = ValueNotifier<String?>(null);
-  late final ValueNotifier<UnitItem> _selectedUnit;
+  final ValueNotifier<UnitItem> _selectedUnit = ValueNotifier(
+    UnitItem(id: '111111111111', name: 'pcs', description: ''),
+  );
   final ValueNotifier<int> _minStock = ValueNotifier(4);
 
   XFile? _pickedImageFile;
@@ -513,6 +515,8 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                                 color: AppColors.primary,
                               ),
                               onPressed: () {
+
+                                // TODO: QR CODE SCANNER IMPLEMENTATION
                                 final generated =
                                     'SKU-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
                                 _skuController.text = generated;
@@ -684,7 +688,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                             children: context.read<UnitProvider>().units.map((
                               x,
                             ) {
-                              final selected = x == selectedUnit;
+                              final selected = x.name == selectedUnit.name;
                               return ChoiceChip(
                                 selected: selected,
                                 onSelected: (value) {
