@@ -1,14 +1,20 @@
 // ignore_for_file: deprecated_member_use
 
+import 'dart:typed_data';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
 import 'package:flutter_catat_stok/core/utils/currency_input_formatter.dart';
 import 'package:flutter_catat_stok/core/utils/smooth_page_route.dart';
 import 'package:flutter_catat_stok/core/widgets/app_card.dart';
+import 'package:flutter_catat_stok/core/widgets/app_shimmer.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/unit_item.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
+import 'package:flutter_catat_stok/module/product/presentation/provider/unit_provider.dart';
 import 'package:flutter_catat_stok/module/product/presentation/screens/manage_category_screen.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 
@@ -32,10 +38,13 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   late TextEditingController _descriptionController;
 
   final ValueNotifier<String?> _selectedCategory = ValueNotifier<String?>(null);
-  final ValueNotifier<UnitType> _selectedUnit = ValueNotifier<UnitType>(
-    UnitType.pcs,
-  );
+  late final ValueNotifier<UnitItem> _selectedUnit;
   final ValueNotifier<int> _minStock = ValueNotifier(4);
+
+  XFile? _pickedImageFile;
+  Uint8List? _pickedImageBytes;
+  String? _existingImageUrl;
+  bool _isUploadingImage = false;
 
   @override
   void initState() {
@@ -44,7 +53,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _skuController = TextEditingController(text: p?.sku ?? '');
     _nameController = TextEditingController(text: p?.name ?? '');
     _stockController = TextEditingController(
-      text: p?.currentStock.toString() ?? '0',
+      text: p?.currentStock.toString() ?? '',
     );
     _minStock.value = p?.minimumStock ?? 4;
     _buyPriceController = TextEditingController(
@@ -55,6 +64,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
     _descriptionController = TextEditingController(text: p?.description ?? '');
     if (p != null) {
+      _existingImageUrl = p.imageUrl;
       _selectedCategory.value = p.categoryName.trim().isNotEmpty
           ? p.categoryName
           : null;
@@ -63,6 +73,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkCategoryAndInit();
+      _selectedUnit.value = context.read<UnitProvider>().units.first;
     });
   }
 
@@ -78,6 +89,153 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     _selectedUnit.dispose();
     _minStock.dispose();
     super.dispose();
+  }
+
+  void _showImageSourcePicker() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Pilih Foto Produk',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.camera_alt_outlined,
+                    color: AppColors.primary,
+                  ),
+                ),
+                title: const Text('Ambil Foto via Kamera'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.photo_library_outlined,
+                    color: AppColors.primary,
+                  ),
+                ),
+                title: const Text('Pilih dari Galeri'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  _pickImage(ImageSource.gallery);
+                },
+              ),
+              if (_pickedImageBytes != null ||
+                  (_existingImageUrl != null && _existingImageUrl!.isNotEmpty))
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.stockOutBg,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.delete_outline_rounded,
+                      color: AppColors.stockOut,
+                    ),
+                  ),
+                  title: const Text(
+                    'Hapus Foto Produk',
+                    style: TextStyle(color: AppColors.stockOut),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      _pickedImageFile = null;
+                      _pickedImageBytes = null;
+                      _existingImageUrl = null;
+                    });
+                  },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final picker = ImagePicker();
+      final XFile? image = await picker.pickImage(
+        source: source,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 70,
+      );
+      if (image != null) {
+        final bytes = await image.readAsBytes();
+        setState(() {
+          _pickedImageFile = image;
+          _pickedImageBytes = bytes;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Gagal mengambil gambar'),
+            backgroundColor: AppColors.stockOut,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<String?> _uploadImageIfAny() async {
+    if (_pickedImageBytes == null || _pickedImageFile == null) {
+      return _existingImageUrl;
+    }
+    setState(() {
+      _isUploadingImage = true;
+    });
+    final provider = context.read<ProductProvider>();
+    final url = await provider.uploadProductImage(
+      filePath: _pickedImageFile!.path,
+      bytes: _pickedImageBytes!,
+    );
+    setState(() {
+      _isUploadingImage = false;
+    });
+    return url ?? _existingImageUrl;
   }
 
   Future<void> _checkCategoryAndInit() async {
@@ -114,13 +272,15 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   void _handleAddProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final selectedCategoryId = context
-        .read<ProductProvider>()
-        .categories
+    final provider = context.read<ProductProvider>();
+    final selectedCategoryId = provider.categories
         .firstWhere((c) => c.name == _selectedCategory.value)
         .id;
 
-    if (await context.read<ProductProvider>().addProduct(
+    final imageUrl = await _uploadImageIfAny();
+    debugPrint('🖼️ imageUrl after upload: $imageUrl');
+
+    if (await provider.addProduct(
       product: Product(
         id: '',
         name: _nameController.text.trim(),
@@ -137,6 +297,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         ).toDouble(),
         description: _descriptionController.text.trim(),
         unit: _selectedUnit.value,
+        imageUrl: imageUrl,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
@@ -149,13 +310,14 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
   void _handleEditProduct() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final selectedCategoryId = context
-        .read<ProductProvider>()
-        .categories
+    final provider = context.read<ProductProvider>();
+    final selectedCategoryId = provider.categories
         .firstWhere((c) => c.name == _selectedCategory.value)
         .id;
 
-    if (await context.read<ProductProvider>().updateProduct(
+    final imageUrl = await _uploadImageIfAny();
+
+    if (await provider.updateProduct(
       product: Product(
         id: widget.product!.id,
         name: _nameController.text.trim(),
@@ -172,6 +334,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
         ).toDouble(),
         description: _descriptionController.text.trim(),
         unit: _selectedUnit.value,
+        imageUrl: imageUrl,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),
@@ -224,7 +387,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                   selector: (_, p) => p.isLoading,
                   builder: (context, isLoading, child) {
                     return ElevatedButton.icon(
-                      onPressed: isLoading
+                      onPressed: (isLoading || _isUploadingImage)
                           ? null
                           : isEdit
                           ? _handleEditProduct
@@ -233,14 +396,14 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         backgroundColor: AppColors.primary,
                         minimumSize: const Size(double.infinity, 48),
                       ),
-                      icon: isLoading
+                      icon: (isLoading || _isUploadingImage)
                           ? const SizedBox.shrink()
                           : const Icon(
                               Icons.check_circle_outline_rounded,
                               color: Colors.white,
                               size: 20,
                             ),
-                      label: isLoading
+                      label: (isLoading || _isUploadingImage)
                           ? const SizedBox(
                               width: 20,
                               height: 20,
@@ -265,7 +428,11 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Product Name Field (Match Stitch 08_tambah_produk)
+              // Image Picker Card
+              _buildImagePickerCard(),
+              const SizedBox(height: 16),
+
+              // Product Name Field
               _buildFieldLabel('Nama Produk *'),
               TextFormField(
                 controller: _nameController,
@@ -414,7 +581,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
               const SizedBox(height: 10),
 
-              // Estimasi Margin Pill Box (Match Stitch 08_tambah_produk)
+              // Estimasi Margin Pill Box
               ListenableBuilder(
                 listenable: Listenable.merge([
                   _buyPriceController,
@@ -504,7 +671,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               ),
               const SizedBox(height: 16),
               _buildFieldLabel('Satuan Barang *'),
-              ValueListenableBuilder<UnitType>(
+              ValueListenableBuilder<UnitItem>(
                 valueListenable: _selectedUnit,
                 builder: (context, selectedUnit, child) {
                   return Row(
@@ -514,7 +681,9 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                           scrollDirection: Axis.horizontal,
                           child: Row(
                             spacing: 8,
-                            children: UnitType.values.map((x) {
+                            children: context.read<UnitProvider>().units.map((
+                              x,
+                            ) {
                               final selected = x == selectedUnit;
                               return ChoiceChip(
                                 selected: selected,
@@ -546,7 +715,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Minimum Stock Stepper Card (Match Stitch 08_tambah_produk)
+              // Minimum Stock Stepper Card
               AppCard(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -647,7 +816,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Initial Stock In Rack Card (Match Stitch 08_tambah_produk)
+              // Initial Stock In Rack Card
               if (!isEdit) ...[
                 AppCard(
                   padding: const EdgeInsets.all(16),
@@ -688,7 +857,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                         ],
                       ),
                       const SizedBox(height: 10),
-                      ValueListenableBuilder<UnitType>(
+                      ValueListenableBuilder<UnitItem>(
                         valueListenable: _selectedUnit,
                         builder: (context, selectedUnit, child) {
                           return TextFormField(
@@ -711,6 +880,174 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildImagePickerCard() {
+    final hasPickedImage = _pickedImageBytes != null;
+    final hasExistingImage =
+        _existingImageUrl != null && _existingImageUrl!.isNotEmpty;
+
+    return AppCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Foto Produk',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.stockInBg,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Text(
+                  'KOMPRESI OTOMATIS',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.stockIn,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: InkWell(
+              onTap: _showImageSourcePicker,
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                width: double.infinity,
+                height: 140,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainer,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border, width: 1),
+                ),
+                child: _isUploadingImage
+                    ? const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            CircularProgressIndicator(color: AppColors.primary),
+                            SizedBox(height: 8),
+                            Text(
+                              'Mengunggah & mengompres gambar...',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : hasPickedImage
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Stack(
+                          children: [
+                            Image.memory(
+                              _pickedImageBytes!,
+                              width: double.infinity,
+                              height: 140,
+                              fit: BoxFit.cover,
+                            ),
+                            Positioned(
+                              right: 8,
+                              top: 8,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.edit_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : hasExistingImage
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Stack(
+                          children: [
+                            CachedNetworkImage(
+                              imageUrl: _existingImageUrl!,
+                              width: double.infinity,
+                              height: 140,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) =>
+                                  AppShimmer.rectangle(
+                                    width: double.infinity,
+                                    height: 140,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                              errorWidget: (context, url, error) => const Icon(
+                                Icons.broken_image_outlined,
+                                size: 40,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            Positioned(
+                              right: 8,
+                              top: 8,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: const BoxDecoration(
+                                  color: Colors.black54,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.edit_rounded,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            'Pilih Foto dari Kamera / Galeri',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Format JPG/PNG • Terkompresi ~150KB',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

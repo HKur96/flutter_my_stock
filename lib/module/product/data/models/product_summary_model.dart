@@ -7,6 +7,7 @@ class ProductSummaryModel extends ProductSummary {
     required super.currentStock,
     required super.recommendedSellingPrice,
     required super.minimumStock,
+    required super.purchasePrice,
   });
 
   factory ProductSummaryModel.fromJson(Map<String, dynamic> map) {
@@ -16,6 +17,7 @@ class ProductSummaryModel extends ProductSummary {
       currentStock: map['current_stock'],
       minimumStock: map['minimum_stock'],
       recommendedSellingPrice: map['recommended_selling_price'],
+      purchasePrice: map['purchase_price'],
     );
   }
 }

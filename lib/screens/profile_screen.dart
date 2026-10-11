@@ -10,6 +10,11 @@ import '../core/theme/app_theme.dart';
 import '../core/widgets/app_card.dart';
 import '../module/auth/presentation/provider/auth_provider.dart';
 
+import 'package:flutter_catat_stok/module/product/presentation/provider/unit_provider.dart';
+import 'package:flutter_catat_stok/module/product/presentation/screens/manage_unit_screen.dart';
+import 'package:flutter_catat_stok/module/settings/presentation/provider/store_settings_provider.dart';
+import 'package:flutter_catat_stok/module/settings/presentation/screens/store_settings_screen.dart';
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -18,6 +23,14 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<StoreSettingsProvider>().fetchStoreSettings();
+    });
+  }
+
   void _handleLogout() {
     showDialog(
       context: context,
@@ -57,6 +70,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final user = context.watch<AuthProvider>().user;
     final products = context.watch<ProductProvider>().products;
     final categories = context.watch<ProductProvider>().categories;
+    final storeSettings = context.watch<StoreSettingsProvider>().settings;
+    final units = context.watch<UnitProvider>().units;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -78,50 +93,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       letterSpacing: -0.5,
                     ),
                   ),
-                  Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.search_rounded, size: 22),
-                        onPressed: () {},
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.tune_rounded, size: 22),
-                        onPressed: () {},
-                      ),
-                    ],
-                  ),
                 ],
               ),
               const SizedBox(height: 12),
-
-              // Status Banner (Match Stitch 01_akun_modern)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainer,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        CircleAvatar(radius: 4, backgroundColor: AppColors.stockIn),
-                        SizedBox(width: 6),
-                        Text(
-                          'Data Tersimpan Lokal',
-                          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textSecondary),
-                        ),
-                      ],
-                    ),
-                    Text(
-                      '🔄 Sinkron: Realtime',
-                      style: TextStyle(fontSize: 11, color: AppColors.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
 
               // User Profile Main Card (Match Stitch 01_akun_modern)
               AppCard(
@@ -149,10 +123,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Text(
-                                    user?.name ?? 'Pak Bambang Sutrisno',
+                                    user?.name ?? 'Nama belum diatur',
                                     style: const TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w800,
@@ -160,14 +135,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   ),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 2,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: AppColors.surfaceContainer,
                                       borderRadius: BorderRadius.circular(10),
                                     ),
-                                    child: const Text(
-                                      'PEMILIK UTAMA',
-                                      style: TextStyle(
+                                    child: Text(
+                                      user?.role.displayName.toUpperCase() ??
+                                          'OPERATOR',
+                                      style: const TextStyle(
                                         fontSize: 9,
                                         fontWeight: FontWeight.w800,
                                         color: AppColors.textSecondary,
@@ -177,14 +156,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ],
                               ),
                               const SizedBox(height: 2),
-                              const Text(
-                                'Toko Kelontong Berkah',
-                                style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                              Text(
+                                storeSettings?.storeName ?? 'Nama belum diatur',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textMuted,
+                                ),
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                user?.email ?? 'bambang.warungjaya@gmail.com',
-                                style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                storeSettings?.address ?? 'Alamat belum diatur',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.textMuted,
+                                ),
                               ),
                             ],
                           ),
@@ -206,11 +191,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Katalog Aktif', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                                const Text(
+                                  'Katalog Aktif',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
                                 const SizedBox(height: 2),
                                 Text(
                                   '${products.length} Item',
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
                               ],
                             ),
@@ -227,30 +221,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('Kategori', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
+                                const Text(
+                                  'Kategori',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
                                 const SizedBox(height: 2),
                                 Text(
                                   '${categories.length} Jenis',
-                                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w800,
+                                  ),
                                 ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: AppColors.surfaceContainer,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Presensi Toko', style: TextStyle(fontSize: 10, color: AppColors.textMuted)),
-                                SizedBox(height: 2),
-                                Text('12 Hari', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800)),
                               ],
                             ),
                           ),
@@ -272,15 +257,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildSettingTile(
                       icon: Icons.storefront_outlined,
                       title: 'Profil Warung & Alamat',
-                      subtitle: 'Jl. Kebon Sirih No. 14, RT 03/05',
-                      onTap: () {},
+                      subtitle: storeSettings?.address?.isNotEmpty == true
+                          ? storeSettings!.address!
+                          : (storeSettings?.storeName ??
+                                'Atur nama & alamat toko'),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          SmoothPageRoute(page: const StoreSettingsScreen()),
+                        );
+                      },
                     ),
                     const Divider(height: 1, color: AppColors.borderSubtle),
                     _buildSettingTile(
                       icon: Icons.grid_view_outlined,
                       title: 'Kelola Kategori Barang',
                       subtitle: '${categories.length} Kategori terdaftar',
-                      badge: '${categories.length} Kategori',
+                      badge: categories.isEmpty
+                          ? 'Tambah'
+                          : '${categories.length} Kategori',
                       onTap: () {
                         Navigator.push(
                           context,
@@ -292,8 +287,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     _buildSettingTile(
                       icon: Icons.inventory_2_outlined,
                       title: 'Satuan Barang Dagangan',
-                      subtitle: 'Pcs, Box, Bungkus, Kg, Liter',
-                      onTap: () {},
+                      subtitle: units.isNotEmpty
+                          ? units.take(4).map((u) => u.name).join(', ')
+                          : 'Belum diatur',
+                      badge: units.isNotEmpty ? '${units.length} Satuan' : null,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          SmoothPageRoute(page: const ManageUnitScreen()),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -313,7 +316,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       subtitle: 'Buku Stok, Nota Masuk (Excel / PDF)',
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Simulasi ekspor laporan stok warung')),
+                          const SnackBar(
+                            content: Text(
+                              'Simulasi ekspor laporan stok warung',
+                            ),
+                          ),
                         );
                       },
                     ),
@@ -340,28 +347,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 icon: const Icon(Icons.logout_rounded, size: 18),
                 label: const Text(
-                  'Keluar dari Akun Toko',
+                  'Logout',
                   style: TextStyle(fontWeight: FontWeight.w700),
                 ),
-              ),
-              const SizedBox(height: 16),
-
-              // Footer App Version Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.surfaceContainer,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Text(
-                  '⚙️ Stok Saya v1.4.2',
-                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textMuted),
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Dibuat khusus UMKM Warung Indonesia • Data dienkripsi lokal',
-                style: TextStyle(fontSize: 11, color: AppColors.textMuted),
               ),
               const SizedBox(height: 16),
             ],
@@ -438,12 +426,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               child: Text(
                 badge,
-                style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.textSecondary),
+                style: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ),
             const SizedBox(width: 4),
           ],
-          const Icon(Icons.chevron_right_rounded, size: 18, color: AppColors.textMuted),
+          const Icon(
+            Icons.chevron_right_rounded,
+            size: 18,
+            color: AppColors.textMuted,
+          ),
         ],
       ),
     );

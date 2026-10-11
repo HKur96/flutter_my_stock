@@ -29,4 +29,9 @@ abstract class ProductRepository {
   Future<bool> deleteProduct(String id);
 
   Future<Product?> updateProduct({required Product product});
+
+  Future<String?> uploadProductImage({
+    required String filePath,
+    required List<int> bytes,
+  });
 }

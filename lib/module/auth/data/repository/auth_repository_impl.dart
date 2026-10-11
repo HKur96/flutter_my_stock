@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/core/services/supabase_service.dart';
 import 'package:flutter_catat_stok/module/auth/data/models/user_model.dart';
 import 'package:flutter_catat_stok/module/auth/domain/models/user.dart' as user;
@@ -68,12 +69,14 @@ class AuthRepositoryImpl implements AuthRepository {
         id: res.user!.id,
         name: name,
         email: email,
+        role: Role.operator,
       );
     } catch (e) {
       return UserModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: name,
         email: email,
+        role: Role.operator,
       );
     }
   }

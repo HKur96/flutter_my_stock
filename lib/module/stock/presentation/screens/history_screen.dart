@@ -28,29 +28,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
   final ScrollController _scrollController = ScrollController();
   Timer? _debounceTimer;
 
-  void _loadData({
-    int page = 1,
-    bool isRefresh = false,
-  }) {
+  void _loadData({int page = 1, bool isRefresh = false}) {
     final filter = _selectedFilter.value == ProductLogType.all
         ? null
         : _selectedFilter.value;
     context.read<StockProvider>().getProductLogs(
-          page: page,
-          limit: 10,
-          searchQuery: _searchController.text,
-          filterType: filter,
-          isRefresh: isRefresh,
-        );
+      page: page,
+      limit: 10,
+      searchQuery: _searchController.text,
+      filterType: filter,
+      isRefresh: isRefresh,
+    );
   }
 
   void _onScroll() {
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
       final provider = context.read<StockProvider>();
-      if (provider.hasMore &&
-          !provider.isLoadingMore &&
-          !provider.isLoading) {
+      if (provider.hasMore && !provider.isLoadingMore && !provider.isLoading) {
         _loadData(page: provider.currentPage + 1);
       }
     }
@@ -442,18 +437,16 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
                   if (logs.isEmpty) {
                     return RefreshIndicator(
-                      onRefresh: () async => _loadData(page: 1, isRefresh: true),
+                      onRefresh: () async =>
+                          _loadData(page: 1, isRefresh: true),
                       child: SingleChildScrollView(
                         physics: const AlwaysScrollableScrollPhysics(),
-                        child: Container(
-                          height: 300,
-                          alignment: Alignment.center,
-                          child: const EmptyStateWidget(
-                            icon: Icons.history_toggle_off_rounded,
-                            title: 'Tidak ada riwayat aktivitas',
-                            subtitle:
-                                'Belum ada catatan mutasi stok yang sesuai.',
-                          ),
+                        child: EmptyStateWidget(
+                          icon: Icons.history_toggle_off_rounded,
+                          title: 'Tidak ada riwayat aktivitas',
+                          subtitle:
+                              'Belum ada catatan mutasi stok yang sesuai.',
+                          imagePath: 'assets/images/empty_product.png',
                         ),
                       ),
                     );
@@ -516,28 +509,38 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             item.productLogType == ProductLogType.stockIn;
                         final isOut =
                             item.productLogType == ProductLogType.stockOut;
+                        final isNew =
+                            item.productLogType == ProductLogType.create;
 
                         final Color iconBg = isIn
                             ? AppColors.stockInBg
                             : isOut
-                                ? AppColors.stockOutBg
-                                : AppColors.warningBg;
+                            ? AppColors.stockOutBg
+                            : isNew
+                            ? AppColors.primaryLight
+                            : AppColors.warningBg;
                         final Color iconColor = isIn
                             ? AppColors.stockIn
                             : isOut
-                                ? AppColors.stockOut
-                                : AppColors.warning;
+                            ? AppColors.stockOut
+                            : isNew
+                            ? AppColors.info
+                            : AppColors.warning;
                         final IconData iconData = isIn
                             ? Icons.south_west_rounded
                             : isOut
-                                ? Icons.north_east_rounded
-                                : Icons.balance_rounded;
+                            ? Icons.north_east_rounded
+                            : isNew
+                            ? Icons.add_rounded
+                            : Icons.balance_rounded;
 
                         final String badgeLabel = isIn
                             ? 'IN'
                             : isOut
-                                ? 'OUT'
-                                : 'ADJ';
+                            ? 'OUT'
+                            : isNew
+                            ? 'NEW'
+                            : 'ADJ';
 
                         return AppCard(
                           padding: const EdgeInsets.all(12),
@@ -561,8 +564,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
                                       item.productName,
@@ -606,9 +608,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     ),
                                     decoration: BoxDecoration(
                                       color: iconBg,
-                                      borderRadius: BorderRadius.circular(
-                                        6,
-                                      ),
+                                      borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Text(
                                       badgeLabel,
@@ -621,7 +621,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${isIn ? "+" : isOut ? "" : ""}${item.stockDifferent} pcs',
+                                    '${isIn
+                                        ? "+"
+                                        : isOut
+                                        ? ""
+                                        : ""}${item.stockDifferent} pcs',
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w800,

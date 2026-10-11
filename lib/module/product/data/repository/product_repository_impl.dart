@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter_catat_stok/core/services/local_storage_service.dart';
 import 'package:flutter_catat_stok/core/services/supabase_service.dart';
 import 'package:flutter_catat_stok/module/product/data/models/category_model.dart';
@@ -116,10 +117,9 @@ class ProductRepositoryImpl implements ProductRepository {
         throw Exception('User tidak ditemukan');
       }
 
-      final response = await _client
-          .from('products')
-          .insert({...product.toJson(), 'user_id': currentUser.id})
-          .select('''
+      final data = {...product.toJson(), 'user_id': currentUser.id};
+      print('📦 addProduct data: $data');
+      final response = await _client.from('products').insert(data).select('''
               id,
               name,
               sku,
@@ -130,16 +130,21 @@ class ProductRepositoryImpl implements ProductRepository {
               is_active,
               created_at,
               updated_at,
-              unit,
               description,
+              image_url,
               categories (
                 id, 
                 name
+              ),
+              units(
+              id,
+              name,
+              description
               )
-      ''')
-          .single();
+      ''').single();
       return ProductModel.fromJson(response);
-    } catch (e) {
+    } catch (e, s) {
+      print('err $e\n$s');
       return null;
     }
   }
@@ -180,11 +185,16 @@ class ProductRepositoryImpl implements ProductRepository {
               is_active,
               created_at,
               updated_at,
-              unit,
               description,
+              image_url,
               categories (
                 id, 
                 name
+              ),
+              units(
+              id,
+              name,
+              description
               )
       ''');
 
@@ -230,16 +240,49 @@ class ProductRepositoryImpl implements ProductRepository {
               is_active,
               created_at,
               updated_at,
-              unit,
               description,
+              image_url,
               categories (
                 id, 
                 name
+              ),
+              units(
+              id,
+              name,
+              description
               )
       ''')
           .single();
       return ProductModel.fromJson(response);
     } catch (e) {
+      return null;
+    }
+  }
+
+  @override
+  Future<String?> uploadProductImage({
+    required String filePath,
+    required List<int> bytes,
+  }) async {
+    try {
+      final fileName = 'prod_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final Uint8List uint8bytes = bytes is Uint8List
+          ? bytes
+          : Uint8List.fromList(bytes);
+      await _client.storage
+          .from('product-images')
+          .uploadBinary(
+            fileName,
+            uint8bytes,
+            fileOptions: const FileOptions(contentType: 'image/jpeg'),
+          );
+      final publicUrl = _client.storage
+          .from('product-images')
+          .getPublicUrl(fileName);
+      print('✅ Upload success, publicUrl: $publicUrl');
+      return publicUrl;
+    } catch (e, s) {
+      print('❌ Upload error: $e\n$s');
       return null;
     }
   }
@@ -255,6 +298,7 @@ class ProductRepositoryImpl implements ProductRepository {
               name,
               current_stock,
               minimum_stock,
+              purchase_price,
               recommended_selling_price
       """)
           .eq('is_active', true);

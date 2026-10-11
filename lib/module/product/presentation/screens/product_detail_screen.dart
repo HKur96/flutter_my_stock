@@ -1,8 +1,10 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
 import 'package:flutter_catat_stok/core/widgets/app_card.dart';
+import 'package:flutter_catat_stok/core/widgets/app_shimmer.dart';
 import 'package:flutter_catat_stok/core/widgets/app_dialog_confirmation.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
@@ -173,6 +175,24 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (p.imageUrl != null && p.imageUrl!.isNotEmpty) ...[
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: CachedNetworkImage(
+                imageUrl: p.imageUrl!,
+                width: double.infinity,
+                height: 160,
+                fit: BoxFit.cover,
+                placeholder: (context, url) => AppShimmer.rectangle(
+                  width: double.infinity,
+                  height: 160,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                errorWidget: (context, url, error) => const SizedBox.shrink(),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -242,7 +262,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                           ),
                         ),
                         TextSpan(
-                          text: ' ${p.unit}',
+                          text: ' ${p.unit.name}',
                           style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.textSecondary,
@@ -281,7 +301,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Min. ${p.minimumStock} ${p.unit}',
+                    'Min. ${p.minimumStock} ${p.unit.name}',
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.textMuted,
@@ -386,7 +406,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ],
               ),
               Text(
-                'Satuan (${p.unit})',
+                'Satuan (${p.unit.name})',
                 style: const TextStyle(
                   fontSize: 11,
                   color: AppColors.textMuted,
@@ -488,7 +508,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                   ),
                   Text(
-                    '${p.currentStock} ${p.unit} × ${CurrencyFormatter.format(sellPrice)}',
+                    '${p.currentStock} ${p.unit.name} × ${CurrencyFormatter.format(sellPrice)}',
                     style: const TextStyle(
                       fontSize: 11,
                       color: AppColors.textMuted,
@@ -674,7 +694,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                     ? "+"
                                     : isOut
                                     ? "-"
-                                    : ""}${log.stockDifferent} ${p.unit}',
+                                    : ""}${log.stockDifferent} ${p.unit.name}',
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w800,

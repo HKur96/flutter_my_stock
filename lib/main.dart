@@ -16,6 +16,13 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'core/theme/app_theme.dart';
 import 'package:provider/provider.dart';
 
+import 'package:flutter_catat_stok/module/product/data/repository/unit_repository_impl.dart';
+import 'package:flutter_catat_stok/module/product/domain/repository/unit_repository.dart';
+import 'package:flutter_catat_stok/module/product/presentation/provider/unit_provider.dart';
+import 'package:flutter_catat_stok/module/settings/data/repository/store_settings_repository_impl.dart';
+import 'package:flutter_catat_stok/module/settings/domain/repository/store_settings_repository.dart';
+import 'package:flutter_catat_stok/module/settings/presentation/provider/store_settings_provider.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('id_ID', null);
@@ -29,6 +36,9 @@ void main() async {
   final AuthRepository authRepository = AuthRepositoryImpl();
   final ProductRepository productRepository = ProductRepositoryImpl();
   final StockRepository stockRepository = StockRepositoryImpl();
+  final StoreSettingsRepository storeSettingsRepository =
+      StoreSettingsRepositoryImpl();
+  final UnitRepository unitRepository = UnitRepositoryImpl();
 
   runApp(
     MultiProvider(
@@ -39,6 +49,12 @@ void main() async {
         ),
         ChangeNotifierProvider(
           create: (_) => StockProvider(stockRepository),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => StoreSettingsProvider(storeSettingsRepository),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => UnitProvider(unitRepository),
         ),
       ],
       child: const StokSayaApp(),

@@ -3,6 +3,7 @@ class ProductSummary {
   final String name;
   final int currentStock;
   final int minimumStock;
+  final double purchasePrice;
   final double recommendedSellingPrice;
 
   const ProductSummary({
@@ -10,6 +11,7 @@ class ProductSummary {
     required this.name,
     required this.currentStock,
     required this.minimumStock,
+    required this.purchasePrice,
     required this.recommendedSellingPrice,
   });
 
@@ -20,6 +22,7 @@ class ProductSummary {
     String? name,
     int? currentStock,
     int? minimumStock,
+    double? purchasePrice,
     double? recommendedSellingPrice,
   }) {
     return ProductSummary(
@@ -27,6 +30,7 @@ class ProductSummary {
       name: name ?? this.name,
       currentStock: currentStock ?? this.currentStock,
       minimumStock: minimumStock ?? this.minimumStock,
+      purchasePrice: purchasePrice ?? this.purchasePrice,
       recommendedSellingPrice:
           recommendedSellingPrice ?? this.recommendedSellingPrice,
     );

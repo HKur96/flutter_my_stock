@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/core/config/global.dart';
+import 'package:flutter_catat_stok/core/services/local_storage_service.dart';
 import 'package:flutter_catat_stok/core/theme/app_theme.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product_summary.dart';
 import 'package:flutter_catat_stok/module/product/domain/repository/product_repository.dart';
+import 'package:flutter_catat_stok/module/stock/domain/models/product_log.dart';
+import 'package:flutter_catat_stok/module/stock/presentation/provider/stock_provider.dart';
+import 'package:provider/provider.dart';
 
 class ProductProvider with ChangeNotifier {
   final ProductRepository _productRepository;
@@ -41,8 +46,14 @@ class ProductProvider with ChangeNotifier {
   // Products
   double get totalValue => _productsSummary.fold(
     0.0,
+    (sum, item) => sum + (item.purchasePrice * item.currentStock),
+  );
+
+  double get totalValuePotential => _productsSummary.fold(
+    0.0,
     (sum, item) => sum + (item.recommendedSellingPrice * item.currentStock),
   );
+
   int get totalItemsCount =>
       _productsSummary.fold(0, (sum, item) => sum + item.currentStock);
 
@@ -146,6 +157,16 @@ class ProductProvider with ChangeNotifier {
     }
   }
 
+  Future<String?> uploadProductImage({
+    required String filePath,
+    required List<int> bytes,
+  }) async {
+    return await _productRepository.uploadProductImage(
+      filePath: filePath,
+      bytes: bytes,
+    );
+  }
+
   Future<List<Product>> getProducts({
     int page = 1,
     int limit = 10,
@@ -211,12 +232,27 @@ class ProductProvider with ChangeNotifier {
     notifyListeners();
     try {
       final newProduct = await _productRepository.addProduct(product: product);
+      final currentUser = await LocalStorageService().getUser();
 
       if (newProduct == null) {
         throw Exception('Gagal menambahkan produk');
       }
 
-      _products = [..._products, newProduct];
+      gNavigatorKey.currentContext!.read<StockProvider>().updateProductLogs(
+        ProductLog(
+          id: '${DateTime.now().millisecondsSinceEpoch}',
+          productId: newProduct.id,
+          productName: newProduct.name,
+          unit: newProduct.unit.name,
+          productLogType: ProductLogType.create,
+          pic: currentUser?.name ?? 'Unknown',
+          oldData: {},
+          newData: {'current_stock': newProduct.currentStock},
+          createdAt: DateTime.now(),
+        ),
+      );
+
+      _products = [newProduct, ..._products];
       notifyListeners();
 
       ScaffoldMessenger.of(gNavigatorKey.currentContext!).showSnackBar(
@@ -226,7 +262,8 @@ class ProductProvider with ChangeNotifier {
         ),
       );
       return true;
-    } catch (e) {
+    } catch (e, s) {
+      print('errrhey $e\n$s');
       showFlashError('Tidak dapat menambahkan produk');
       return false;
     } finally {

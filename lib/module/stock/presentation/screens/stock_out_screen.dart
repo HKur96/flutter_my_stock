@@ -203,7 +203,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
           builder: (context, selectedProduct, child) {
             final products = context.watch<ProductProvider>().products;
             final currentStock = selectedProduct?.currentStock ?? 0;
-            final unit = selectedProduct?.unit ?? UnitType.pcs;
+            final unit = selectedProduct?.unit.name ?? 'pcs';
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,13 +213,13 @@ class _StockOutScreenState extends State<StockOutScreen> {
                   selectedProduct,
                   products,
                   currentStock,
-                  unit.name,
+                  unit,
                 ),
                 const SizedBox(height: 16),
 
                 if (selectedProduct != null) ...[
                   // Kuantitas Keluar Card
-                  _buildQuantityCard(unit.name, currentStock),
+                  _buildQuantityCard(unit, currentStock),
                   const SizedBox(height: 16),
 
                   // Alasan Pengeluaran Stok Card
@@ -231,7 +231,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
                   const SizedBox(height: 16),
 
                   // Ringkasan Sisa Saldo Stok Card
-                  _buildRemainingStockCard(selectedProduct, unit.name),
+                  _buildRemainingStockCard(selectedProduct, unit),
                 ],
               ],
             );

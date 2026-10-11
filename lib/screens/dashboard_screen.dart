@@ -2,10 +2,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/extensions.dart';
+import 'package:flutter_catat_stok/core/services/local_storage_service.dart';
 import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
 import 'package:flutter_catat_stok/core/widgets/app_shimmer.dart';
+import 'package:flutter_catat_stok/module/auth/domain/models/user.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
+import 'package:flutter_catat_stok/module/product/presentation/provider/unit_provider.dart';
 import 'package:flutter_catat_stok/module/stock/presentation/provider/stock_provider.dart';
 import 'package:flutter_catat_stok/module/stock/presentation/screens/stock_opname_screen.dart';
 import 'package:provider/provider.dart';
@@ -27,10 +30,13 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  User? _currentUser;
+
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _currentUser = await LocalStorageService().getUser();
       _loadDatas();
     });
   }
@@ -39,6 +45,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     await Future.wait([
       context.read<ProductProvider>().getCategories(),
       context.read<ProductProvider>().getProductsSummary(),
+      context.read<UnitProvider>().fetchUnits(),
       context.read<StockProvider>().getProductLogs(
         page: 1,
         limit: 5,
@@ -125,38 +132,96 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Consumer<ProductProvider>(
       builder: (_, provider, __) {
         final isLoading = provider.isLoadingProductSummary;
-
         return AppCard(
           padding: const EdgeInsets.all(16),
           borderRadius: 16,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Estimasi Nilai Stok',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textMuted,
+              if (_currentUser?.role == Role.owner) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Estimasi Nilai Stok',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textMuted,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          if (isLoading) ...[
+                            AppShimmer.rectangle(
+                              width: double.infinity,
+                              height: 20,
+                            ),
+                          ] else ...[
+                            Text(
+                              CurrencyFormatter.format(provider.totalValue),
+                              style: const TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.textPrimary,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    Container(
+                      height: 28,
+                      width: 1,
+                      color: AppColors.borderSubtle,
+                    ),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(left: 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Potensi Pendapatan',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            if (isLoading) ...[
+                              AppShimmer.rectangle(
+                                width: double.infinity,
+                                height: 20,
+                              ),
+                            ] else ...[
+                              Text(
+                                CurrencyFormatter.format(
+                                  provider.totalValuePotential,
+                                ),
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppColors.textPrimary,
+                                  letterSpacing: -0.3,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 4),
-              if (isLoading) ...[
-                AppShimmer.rectangle(width: double.infinity, height: 20),
-              ] else ...[
-                Text(
-                  CurrencyFormatter.format(provider.totalValue),
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.textPrimary,
-                    letterSpacing: -0.3,
-                  ),
-                ),
+
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: AppColors.borderSubtle),
+                const SizedBox(height: 12),
               ],
-              const SizedBox(height: 12),
-              const Divider(height: 1, color: AppColors.borderSubtle),
-              const SizedBox(height: 12),
               Row(
                 children: [
                   Expanded(
@@ -364,7 +429,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 ),
               ),
-            ] else if (provider.lowStockItems.isEmpty)
+            ] else if (provider.products.isEmpty)
+              AppCard(
+                padding: const EdgeInsets.all(16),
+                child: const Center(
+                  child: Text(
+                    'Belum ada produk.',
+                    style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                  ),
+                ),
+              )
+            else if (provider.lowStockItems.isEmpty)
               AppCard(
                 padding: const EdgeInsets.all(16),
                 child: const Center(

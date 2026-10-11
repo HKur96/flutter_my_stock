@@ -1,3 +1,24 @@
+enum Role {
+  owner,
+  operator;
+
+  static Role fromValue(String val) {
+    switch (val.toUpperCase()) {
+      case 'OWNER':
+        return Role.owner;
+      case 'OPERATOR':
+        return Role.operator;
+      default:
+        return Role.operator;
+    }
+  }
+
+  String get displayName => switch (this) {
+    Role.owner => 'Pemilik',
+    Role.operator => 'Operator',
+  };
+}
+
 enum PickCategoryType { initial, manage }
 
 enum ProductLogType {
@@ -64,26 +85,3 @@ enum StockTransactionType {
     }
   }
 }
-
-enum UnitType { pcs, unit, bungkus, rim, box, kg, liter;
-  static UnitType fromValue(String value) {
-    switch (value.toUpperCase()) {
-      case 'PCS':
-        return UnitType.pcs;
-      case 'UNIT':
-        return UnitType.unit;
-      case 'BUNGKUS':
-        return UnitType.bungkus;
-      case 'RIM':
-        return UnitType.rim;
-      case 'BOX':
-        return UnitType.box;
-      case 'KG':
-        return UnitType.kg;
-      case 'LITER':
-        return UnitType.liter;
-      default:
-        return UnitType.pcs;
-    }
-  }
-   }

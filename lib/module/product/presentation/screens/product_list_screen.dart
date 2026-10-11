@@ -1,13 +1,13 @@
 // ignore_for_file: deprecated_member_use
 
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
 import 'package:flutter_catat_stok/core/widgets/app_text_field.dart';
 import 'package:flutter_catat_stok/core/widgets/empty_state_widget.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
-import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -111,13 +111,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
             _buildFilterChips(),
             const SizedBox(height: 14),
 
-            // Metric Strip (Total Item Aktif & Perlu Restok)
-            _buildMetricStrip(),
-            const SizedBox(height: 14),
-
             // Product List Items
             _buildProductList(),
-            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -152,8 +147,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
           const SizedBox(width: 8),
           Container(
-            height: 42,
-            width: 42,
+            height: 50,
+            width: 50,
             decoration: BoxDecoration(
               color: AppColors.surfaceCard,
               borderRadius: BorderRadius.circular(12),
@@ -162,13 +157,10 @@ class _ProductListScreenState extends State<ProductListScreen> {
             child: IconButton(
               icon: const Icon(
                 Icons.qr_code_scanner_rounded,
-                size: 20,
+                size: 24,
                 color: AppColors.primary,
               ),
               onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Simulasi Scan Barcode SKU')),
-                );
               },
             ),
           ),
@@ -223,100 +215,6 @@ class _ProductListScreenState extends State<ProductListScreen> {
     );
   }
 
-  Widget _buildMetricStrip() {
-    return Selector<ProductProvider, List<Product>>(
-      selector: (_, p) => p.products,
-      builder: (context, products, _) {
-        final lowStockCount = products.where((p) => p.isLowStock).length;
-
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Row(
-            children: [
-              Expanded(
-                child: AppCard(
-                  padding: const EdgeInsets.all(12),
-                  borderRadius: 14,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Total Item Aktif',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.textMuted,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '${products.length} Produk',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Icon(
-                        Icons.inventory_2_outlined,
-                        size: 18,
-                        color: AppColors.primaryAccent,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: AppCard(
-                  padding: const EdgeInsets.all(12),
-                  borderRadius: 14,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Perlu Restok',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: AppColors.stockOut,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            '$lowStockCount Item Tipis',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.stockOut,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Icon(
-                        Icons.warning_amber_rounded,
-                        size: 18,
-                        color: AppColors.stockOut,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildProductList() {
     return Expanded(
       child: Consumer<ProductProvider>(
@@ -333,10 +231,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 borderRadius: 16,
                 child: ListView.separated(
                   itemCount: 6,
-                  separatorBuilder: (_, __) => const Divider(
-                    height: 1,
-                    color: AppColors.borderSubtle,
-                  ),
+                  separatorBuilder: (_, __) =>
+                      const Divider(height: 1, color: AppColors.borderSubtle),
                   itemBuilder: (context, index) {
                     return Padding(
                       padding: const EdgeInsets.all(14.0),
@@ -374,15 +270,17 @@ class _ProductListScreenState extends State<ProductListScreen> {
               onRefresh: () async => _loadProducts(page: 1, isRefresh: true),
               child: SingleChildScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                child: Container(
-                  height: 300,
-                  alignment: Alignment.center,
-                  child: const EmptyStateWidget(
-                    icon: Icons.inventory_2_outlined,
-                    title: 'Produk tidak ditemukan',
-                    subtitle:
-                        'Coba ubah kata kunci pencarian atau filter kategori.',
+                child: EmptyStateWidget(
+                  imagePath: 'assets/images/empty_product.png',
+                  title: 'Produk tidak ditemukan',
+                  subtitle:
+                      'Coba ubah kata kunci pencarian atau filter kategori.',
+                  actionLabel: 'Tambah Produk',
+                  onAction: () => Navigator.push(
+                    context,
+                    SmoothPageRoute(page: const AddEditProductScreen()),
                   ),
+                  icon: Icons.add,
                 ),
               ),
             );
@@ -452,6 +350,8 @@ class _ProductListScreenState extends State<ProductListScreen> {
                         padding: const EdgeInsets.all(14.0),
                         child: Row(
                           children: [
+                            _buildProductThumbnail(item.imageUrl),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,6 +466,51 @@ class _ProductListScreenState extends State<ProductListScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProductThumbnail(String? imageUrl) {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          width: 44,
+          height: 44,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => AppShimmer.rectangle(
+            width: 44,
+            height: 44,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          errorWidget: (context, url, error) => Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainer,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(
+              Icons.inventory_2_outlined,
+              size: 20,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      );
+    }
+    return Container(
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: const Icon(
+        Icons.inventory_2_outlined,
+        size: 20,
+        color: AppColors.primary,
       ),
     );
   }

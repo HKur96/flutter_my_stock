@@ -1,10 +1,10 @@
-import 'package:flutter_catat_stok/core/config/enum.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/unit_item.dart';
 
 class Product {
   final String id;
   final String name;
   final String sku;
-  final UnitType unit;
+  final UnitItem unit;
   final String categoryId;
   final String categoryName;
   final num purchasePrice;
@@ -15,6 +15,7 @@ class Product {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String description;
+  final String? imageUrl;
 
   const Product({
     required this.id,
@@ -31,6 +32,7 @@ class Product {
     required this.createdAt,
     required this.updatedAt,
     required this.description,
+    this.imageUrl,
   });
 
   bool get isLowStock => currentStock < minimumStock;
@@ -46,7 +48,8 @@ class Product {
       'current_stock': currentStock,
       'is_active': isActive,
       'description': description,
-      'unit': unit,
+      'unit_id': unit.id,
+      'image_url': imageUrl,
     };
   }
 
@@ -68,7 +71,8 @@ class Product {
           isActive == other.isActive &&
           createdAt == other.createdAt &&
           updatedAt == other.updatedAt &&
-          description == other.description;
+          description == other.description &&
+          imageUrl == other.imageUrl;
 
   @override
   int get hashCode => Object.hash(
@@ -86,5 +90,6 @@ class Product {
         createdAt,
         updatedAt,
         description,
+        imageUrl,
       );
 }

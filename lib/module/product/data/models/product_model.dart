@@ -1,4 +1,4 @@
-import 'package:flutter_catat_stok/core/config/enum.dart';
+import 'package:flutter_catat_stok/module/product/data/models/unit_item_model.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 
 class ProductModel extends Product {
@@ -17,6 +17,7 @@ class ProductModel extends Product {
     required super.categoryName,
     required super.unit,
     required super.description,
+    super.imageUrl,
   });
 
   factory ProductModel.fromJson(Map<String, dynamic> json) {
@@ -33,16 +34,11 @@ class ProductModel extends Product {
       }
     }
 
-    String unitVal = json['unit']?.toString() ?? '';
-    if (unitVal.trim().isEmpty) {
-      unitVal = 'Pcs';
-    }
-
     return ProductModel(
       id: json['id']?.toString() ?? '',
       name: json['name'] ?? '',
       sku: json['sku'] ?? '',
-      unit: UnitType.fromValue(json['unit'].toString().trim()),
+      unit: UnitItemModel.fromJson(json['units']),
       categoryId: catId,
       categoryName: catName,
       purchasePrice: json['purchase_price'] ?? 0,
@@ -57,6 +53,7 @@ class ProductModel extends Product {
           ? DateTime.parse(json['updated_at'])
           : DateTime.now(),
       description: json['description'] ?? '',
+      imageUrl: json['image_url']?.toString(),
     );
   }
 }

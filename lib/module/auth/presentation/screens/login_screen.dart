@@ -3,10 +3,8 @@ import '../../../../core/theme/app_theme.dart';
 import '../../../../core/widgets/app_button.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_text_field.dart';
-import '../../../../core/utils/smooth_page_route.dart';
 import 'package:provider/provider.dart';
 import '../provider/auth_provider.dart';
-import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -179,37 +177,37 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 24),
+                // const SizedBox(height: 24),
 
-                // Register Navigation Link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Belum punya akun? ',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          SmoothPageRoute(page: const RegisterScreen()),
-                        );
-                      },
-                      child: const Text(
-                        'Daftar disini',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primaryAccent,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                // // Register Navigation Link
+                // Row(
+                //   mainAxisAlignment: MainAxisAlignment.center,
+                //   children: [
+                //     const Text(
+                //       'Belum punya akun? ',
+                //       style: TextStyle(
+                //         fontSize: 13,
+                //         color: AppColors.textSecondary,
+                //       ),
+                //     ),
+                //     GestureDetector(
+                //       onTap: () {
+                //         Navigator.push(
+                //           context,
+                //           SmoothPageRoute(page: const RegisterScreen()),
+                //         );
+                //       },
+                //       child: const Text(
+                //         'Daftar disini',
+                //         style: TextStyle(
+                //           fontSize: 13,
+                //           fontWeight: FontWeight.w700,
+                //           color: AppColors.primaryAccent,
+                //         ),
+                //       ),
+                //     ),
+                //   ],
+                // ),
               ],
             ),
           ),

@@ -36,6 +36,11 @@ class StockProvider with ChangeNotifier {
   bool get hasDetailMore => _hasDetailMore;
   int get detailCurrentPage => _detailCurrentPage;
 
+  void updateProductLogs(ProductLog productLog) {
+    _productLogs.insert(0, productLog);
+    notifyListeners();
+  }
+
   Future<void> getProductLogs({
     int page = 1,
     int limit = 10,

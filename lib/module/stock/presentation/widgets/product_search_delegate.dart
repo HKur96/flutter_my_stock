@@ -1,5 +1,7 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/theme/app_theme.dart';
+import 'package:flutter_catat_stok/core/widgets/app_shimmer.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 
 class ProductSearchDelegate extends SearchDelegate<Product?> {
@@ -73,20 +75,56 @@ class ProductSearchDelegate extends SearchDelegate<Product?> {
     return ListView.separated(
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: filtered.length,
-      separatorBuilder: (_, __) => const Divider(height: 1, color: AppColors.border),
+      separatorBuilder: (_, __) =>
+          const Divider(height: 1, color: AppColors.border),
       itemBuilder: (context, index) {
         final p = filtered[index];
         return ListTile(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.primaryLight,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
           ),
+          leading: p.imageUrl != null
+              ? ClipRRect(
+                borderRadius: BorderRadiusGeometry.circular(12),
+                child: CachedNetworkImage(
+                    imageUrl: p.imageUrl!,
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.cover,
+                    placeholder: (context, url) => AppShimmer.rectangle(
+                      width: 40,
+                      height: 40,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    errorWidget: (context, url, error) => Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceContainer,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.inventory_2_outlined,
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+              )
+              : Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(
+                    Icons.inventory_2_outlined,
+                    color: AppColors.primary,
+                    size: 20,
+                  ),
+                ),
           title: Text(
             p.name,
             style: const TextStyle(
@@ -104,7 +142,7 @@ class ProductSearchDelegate extends SearchDelegate<Product?> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                '${p.currentStock} ${p.unit}',
+                '${p.currentStock} ${p.unit.name}',
                 style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 14,

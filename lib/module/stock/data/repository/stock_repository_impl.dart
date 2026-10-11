@@ -60,7 +60,7 @@ class StockRepositoryImpl implements StockRepository {
           .range(from, to);
 
       return (response as List)
-          .map((e) => ProductLogModel.fromJson(e as Map<String, dynamic>))
+          .map<ProductLog>((e) => ProductLogModel.fromJson(e as Map<String, dynamic>))
           .toList();
     } catch (e) {
       return [];

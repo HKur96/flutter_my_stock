@@ -494,7 +494,7 @@ class _StockOpnameScreenState extends State<StockOpnameScreen> {
 
   // ── Stepper Card ────────────────────────────────────────────────────
   Widget _buildStepperCard() {
-    final unit = _selectedProduct.value?.unit ?? UnitType.pcs;
+    final unit = _selectedProduct.value?.unit.name ?? 'pcs';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -556,7 +556,7 @@ class _StockOpnameScreenState extends State<StockOpnameScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        unit.name,
+                        unit,
                         style: const TextStyle(
                           fontSize: 12,
                           color: AppColors.textMuted,

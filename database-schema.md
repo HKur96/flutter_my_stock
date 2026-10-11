@@ -88,9 +88,13 @@ create table if not exists public.products (
 
     sku text,
 
-    unit text,
+    unit_id uuid
+        references public.units(id)
+        on delete restrict,
 
     description text,
+
+    image_url text,
 
     purchase_price numeric(15,2) not null default 0,
 
@@ -265,6 +269,10 @@ on public.products(user_id);
 
 create index if not exists products_category_id_idx
 on public.products(category_id);
+
+
+create index if not exists products_unit_id_idx
+on public.products(unit_id);
 
 
 create index if not exists products_active_idx
@@ -1147,4 +1155,62 @@ from public.products p
 where p.is_active = true
 
 group by p.user_id;
+
+
+-- ============================================================
+-- STORE SETTINGS
+-- ============================================================
+
+create table if not exists public.store_settings (
+    id uuid primary key default gen_random_uuid(),
+    user_id uuid references auth.users(id) on delete cascade,
+    store_name text not null default 'Warung Saya',
+    address text,
+    phone_number text,
+    header_footer_note text,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+);
+
+alter table public.store_settings enable row level security;
+
+create policy "Allow all access to store_settings"
+    on public.store_settings for all
+    using (true);
+
+
+-- ============================================================
+-- UNITS (SATUAN BARANG)
+-- ============================================================
+
+create table if not exists public.units (
+    id uuid primary key default gen_random_uuid(),
+    name text not null unique,
+    description text,
+    created_at timestamptz not null default now()
+);
+
+alter table public.units enable row level security;
+
+create policy "Allow all access to units"
+    on public.units for all
+    using (true);
+
+-- Insert default units
+insert into public.units (name, description) values
+    ('Pcs', 'Potong / Biji'),
+    ('Unit', 'Per Unit'),
+    ('Bungkus', 'Bungkus / Pack Kecil'),
+    ('Box', 'Kotak / Kardus Sedang'),
+    ('Kg', 'Kilogram'),
+    ('Liter', 'Liter'),
+    ('Rim', 'Rim Kertas'),
+    ('Bal', 'Bal Karungan'),
+    ('Karton', 'Karton Besar'),
+    ('Dus', 'Dus Produk'),
+    ('Slop', 'Slop / Pack Panjang'),
+    ('Sachet', 'Sachet Kecil'),
+    ('Pack', 'Paket / Pack'),
+    ('Roll', 'Gulungan / Roll')
+on conflict (name) do nothing;
 ```

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/core/utils/smooth_page_route.dart';
 import 'package:flutter_catat_stok/core/widgets/app_card.dart';
+import 'package:flutter_catat_stok/core/widgets/empty_state_widget.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
 import 'package:flutter_catat_stok/screens/main_navigation_screen.dart';
@@ -79,6 +80,9 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
               TextField(
                 controller: nameController,
                 autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                onTapOutside: (_) =>
+                    FocusManager.instance.primaryFocus?.unfocus(),
                 decoration: const InputDecoration(
                   hintText: 'Contoh: Aksesoris HP',
                   prefixIcon: Icon(
@@ -106,7 +110,9 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                         );
                       }
                     } else {
-                      _productProvider.addCategory(name: nameController.text.trim());
+                      _productProvider.addCategory(
+                        name: nameController.text.trim(),
+                      );
                     }
 
                     Navigator.pop(context);
@@ -141,20 +147,76 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                 onPressed: () => Navigator.pop(context),
               ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'manage_category_fab',
-        onPressed: () => _showAddEditCategoryModal(categories: _productProvider.categories),
-        backgroundColor: AppColors.primary,
-        elevation: 2,
-        icon: const Icon(Icons.add_rounded, color: Colors.white, size: 20),
-        label: const Text(
-          'Kategori Baru',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
-        ),
-      ),
+      bottomNavigationBar: widget.type != PickCategoryType.initial
+          ? null
+          : Selector<ProductProvider, List<CategoryItem>>(
+              selector: (_, p) => p.categories,
+              builder: (context, categories, __) {
+                if (categories.isEmpty) {
+                  return const SizedBox.shrink();
+                }
+
+                return Container(
+                  color: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (_productProvider.categories.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Buat setidaknya 1 kategori terlebih dahulu.',
+                            ),
+                            backgroundColor: AppColors.warning,
+                          ),
+                        );
+                        return;
+                      }
+                      Navigator.of(context).pushReplacement(
+                        SmoothPageRoute(page: const MainNavigationScreen()),
+                      );
+                    },
+                    child: const Text(
+                      'Lanjut ke Dashboard',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+      floatingActionButton: widget.type == PickCategoryType.initial
+          ? null
+          : FloatingActionButton.extended(
+              heroTag: 'manage_category_fab',
+              onPressed: () => _showAddEditCategoryModal(
+                categories: _productProvider.categories,
+              ),
+              backgroundColor: AppColors.primary,
+              elevation: 2,
+              icon: const Icon(
+                Icons.add_rounded,
+                color: Colors.white,
+                size: 20,
+              ),
+              label: const Text(
+                'Kategori Baru',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ),
       body: RefreshIndicator(
         onRefresh: () => _productProvider.getCategories(),
         child: SingleChildScrollView(
+          key: const PageStorageKey('manage_category_screen'),
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20.0),
           child: Column(
@@ -213,14 +275,16 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                 selector: (_, provider) => provider.categories,
                 builder: (context, categoryList, _) {
                   if (categoryList.isEmpty) {
-                    return AppCard(
-                      padding: const EdgeInsets.all(24),
-                      child: const Center(
-                        child: Text(
-                          'Belum ada kategori diset. Klik tombol + Kategori Baru.',
-                          style: TextStyle(fontSize: 13, color: AppColors.textMuted),
-                        ),
+                    return EmptyStateWidget(
+                      imagePath: 'assets/images/empty_category.png',
+                      title: 'Belum ada kategori',
+                      subtitle:
+                          'Klik tombol + Kategori Baru untuk menambahkannya.',
+                      actionLabel: 'Kategori Baru',
+                      onAction: () => _showAddEditCategoryModal(
+                        categories: _productProvider.categories,
                       ),
+                      icon: Icons.add,
                     );
                   }
 
@@ -232,7 +296,10 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                     itemBuilder: (context, index) {
                       final cat = categoryList[index];
                       return AppCard(
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         borderRadius: 14,
                         child: Row(
                           children: [
@@ -289,7 +356,7 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                                   );
                                   return;
                                 }
-                                
+
                                 _productProvider.deleteCategory(cat.id);
                               },
                             ),
@@ -300,43 +367,6 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
                   );
                 },
               ),
-
-              if (widget.type == PickCategoryType.initial) ...[
-                const SizedBox(height: 24),
-                Center(
-                  child: Consumer<ProductProvider>(
-                    builder: (context, provider, _) {
-                      return ElevatedButton(
-                        onPressed: () {
-                          if (provider.categories.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Buat setidaknya 1 kategori terlebih dahulu.',
-                                ),
-                                backgroundColor: AppColors.warning,
-                              ),
-                            );
-                            return;
-                          }
-                          Navigator.of(context).pushReplacement(
-                            SmoothPageRoute(
-                              page: const MainNavigationScreen(),
-                            ),
-                          );
-                        },
-                        child: const Text(
-                          'Lanjut ke Dashboard',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ],
             ],
           ),
         ),
