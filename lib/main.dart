@@ -1,3 +1,4 @@
+import 'package:chucker_flutter/chucker_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/global.dart';
 import 'package:flutter_catat_stok/core/services/supabase_service.dart';
@@ -25,6 +26,11 @@ import 'package:flutter_catat_stok/module/settings/presentation/provider/store_s
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Disable overlay notification Chucker (bug layout di v1.9.2).
+  // Buka Chucker via shake gesture atau navigasi manual.
+  ChuckerFlutter.showNotification = false;
+
   await initializeDateFormatting('id_ID', null);
 
   // Inisialisasi dotenv
@@ -78,19 +84,11 @@ class StokSayaApp extends StatefulWidget {
 }
 
 class _StokSayaAppState extends State<StokSayaApp> {
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
-
-  @override
-  void initState() {
-    super.initState();
-    gNavigatorKey = _navigatorKey;
-  }
-
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Stok Saya',
-      navigatorKey: _navigatorKey,
+      navigatorKey: gNavigatorKey,
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: const SplashScreen(),

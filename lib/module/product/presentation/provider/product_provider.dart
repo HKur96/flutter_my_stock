@@ -44,15 +44,10 @@ class ProductProvider with ChangeNotifier {
   int get currentProductPage => _currentProductPage;
 
   // Products
-  double get totalValue {
-    for (var item in _productsSummary) {
-      print(item.purchasePrice * item.currentStock);
-    }
-    return _productsSummary.fold(
-      0.0,
-      (sum, item) => sum + (item.purchasePrice * item.currentStock),
-    );
-  }
+  double get totalValue => _productsSummary.fold(
+    0.0,
+    (sum, item) => sum + (item.purchasePrice * item.currentStock),
+  );
 
   double get totalValuePotential => _productsSummary.fold(
     0.0,

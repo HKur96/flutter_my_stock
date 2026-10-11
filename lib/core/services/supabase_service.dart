@@ -1,7 +1,9 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:chucker_flutter/chucker_flutter.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_catat_stok/core/config/supabase_config.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SupabaseService {
@@ -28,9 +30,11 @@ class SupabaseService {
     }
 
     try {
+      debugPrint('[SupabaseService] Starting initialization...');
       await Supabase.initialize(
         url: SupabaseConfig.url,
         anonKey: SupabaseConfig.anonKey,
+        httpClient: ChuckerHttpClient(http.Client()),
       );
       _isInitialized = true;
       debugPrint('✅ [SupabaseService] Berhasil terhubung ke Supabase!');

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/extensions.dart';
 import 'package:flutter_catat_stok/core/services/local_storage_service.dart';
 import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
+import 'package:flutter_catat_stok/core/widgets/app_circle_avatar.dart';
 import 'package:flutter_catat_stok/core/widgets/app_shimmer.dart';
 import 'package:flutter_catat_stok/module/auth/domain/models/user.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
@@ -113,18 +114,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             letterSpacing: -0.5,
           ),
         ),
-        CircleAvatar(
-          radius: 18,
-          backgroundColor: AppColors.primary,
-          child: Text(
-            user?.name.initials ?? 'U',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-        ),
+        AppCircleAvatar(name: user?.name.initials ?? 'U'),
       ],
     );
   }

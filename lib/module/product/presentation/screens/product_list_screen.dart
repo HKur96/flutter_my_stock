@@ -3,7 +3,9 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/core/config/extensions.dart';
 import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
+import 'package:flutter_catat_stok/core/widgets/app_circle_avatar.dart';
 import 'package:flutter_catat_stok/core/widgets/app_text_field.dart';
 import 'package:flutter_catat_stok/core/widgets/empty_state_widget.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
@@ -456,6 +458,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
           ),
           Row(
             children: [
+              AppCircleAvatar(name: user?.name.initials ?? 'U'),
               IconButton(
                 icon: const Icon(Icons.add_rounded, size: 24),
                 onPressed: () {

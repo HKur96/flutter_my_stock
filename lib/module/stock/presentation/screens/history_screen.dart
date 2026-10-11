@@ -4,7 +4,10 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/enum.dart';
+import 'package:flutter_catat_stok/core/config/extensions.dart';
+import 'package:flutter_catat_stok/core/widgets/app_circle_avatar.dart';
 import 'package:flutter_catat_stok/core/widgets/empty_state_widget.dart';
+import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
 import 'package:flutter_catat_stok/module/stock/domain/models/product_log.dart';
 import 'package:flutter_catat_stok/module/stock/presentation/provider/stock_provider.dart';
 import 'package:provider/provider.dart';
@@ -28,6 +31,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   Timer? _debounceTimer;
+
+  late final user = context.watch<AuthProvider>().user;
 
   void _loadData({int page = 1, bool isRefresh = false}) {
     final filter = _selectedFilter.value == ProductLogType.all
@@ -105,6 +110,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                   ),
                   Row(
                     children: [
+                      AppCircleAvatar(name: user?.name.initials ?? 'U'),  
                       IconButton(
                         icon: Icon(
                           _showSearch
@@ -565,7 +571,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                 )
                               else
                                 ClipRRect(
-                                  borderRadius: BorderRadiusGeometry.circular(8),
+                                  borderRadius: BorderRadiusGeometry.circular(
+                                    8,
+                                  ),
                                   child: CachedNetworkImage(
                                     imageUrl: item.imageUrl!,
                                     width: 34,
@@ -575,7 +583,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                         AppShimmer.rectangle(
                                           width: 40,
                                           height: 40,
-                                          borderRadius: BorderRadius.circular(10),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
                                         ),
                                     errorWidget: (context, url, error) =>
                                         Container(
