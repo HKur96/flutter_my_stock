@@ -1,4 +1,5 @@
 import 'package:flutter_catat_stok/core/config/enum.dart';
+import 'package:flutter_catat_stok/module/product/data/models/unit_item_model.dart';
 import 'package:flutter_catat_stok/module/stock/domain/models/product_log.dart';
 
 class ProductLogModel extends ProductLog {
@@ -13,6 +14,7 @@ class ProductLogModel extends ProductLog {
     required super.newData,
     required super.createdAt,
     required super.unit,
+    required super.imageUrl,
   });
 
   factory ProductLogModel.fromJson(Map<String, dynamic> json) {
@@ -32,7 +34,8 @@ class ProductLogModel extends ProductLog {
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
-      unit: json['products']['unit'] ?? 'pcs',
+      unit: UnitItemModel.fromJson(json['products']?['units'] ?? {}),
+      imageUrl: json['products']?['image_url'],
     );
   }
 }

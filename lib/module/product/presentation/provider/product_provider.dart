@@ -44,10 +44,15 @@ class ProductProvider with ChangeNotifier {
   int get currentProductPage => _currentProductPage;
 
   // Products
-  double get totalValue => _productsSummary.fold(
-    0.0,
-    (sum, item) => sum + (item.purchasePrice * item.currentStock),
-  );
+  double get totalValue {
+    for (var item in _productsSummary) {
+      print(item.purchasePrice * item.currentStock);
+    }
+    return _productsSummary.fold(
+      0.0,
+      (sum, item) => sum + (item.purchasePrice * item.currentStock),
+    );
+  }
 
   double get totalValuePotential => _productsSummary.fold(
     0.0,
@@ -243,12 +248,15 @@ class ProductProvider with ChangeNotifier {
           id: '${DateTime.now().millisecondsSinceEpoch}',
           productId: newProduct.id,
           productName: newProduct.name,
-          unit: newProduct.unit.name,
+          imageUrl: newProduct.imageUrl,
+          unit: newProduct.unit,
           productLogType: ProductLogType.create,
           pic: currentUser?.name ?? 'Unknown',
           oldData: {},
           newData: {'current_stock': newProduct.currentStock},
           createdAt: DateTime.now(),
+          note:
+              '${currentUser?.name} menambahkan produk ${newProduct.name} dengan stok awal ${newProduct.currentStock} ${newProduct.unit.name}',
         ),
       );
 
@@ -262,8 +270,7 @@ class ProductProvider with ChangeNotifier {
         ),
       );
       return true;
-    } catch (e, s) {
-      print('errrhey $e\n$s');
+    } catch (e) {
       showFlashError('Tidak dapat menambahkan produk');
       return false;
     } finally {

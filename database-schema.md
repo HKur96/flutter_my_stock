@@ -1,4 +1,3 @@
-```sql
 -- ============================================================
 -- PERSONAL STOCK MANAGER
 -- SUPABASE DATABASE SCHEMA
@@ -67,6 +66,47 @@ create table if not exists public.categories (
     constraint categories_user_name_unique
         unique (user_id, name)
 );
+
+
+-- ============================================================
+-- UNITS (SATUAN BARANG)
+-- Harus dibuat SEBELUM products karena products.unit_id
+-- mereferensikan table ini.
+-- ============================================================
+
+create table if not exists public.units (
+    id uuid primary key default gen_random_uuid(),
+    name text not null unique,
+    description text,
+    created_at timestamptz not null default now()
+);
+
+alter table public.units enable row level security;
+
+drop policy if exists "Allow all access to units"
+on public.units;
+
+create policy "Allow all access to units"
+    on public.units for all
+    using (true);
+
+-- Insert default units
+insert into public.units (name, description) values
+    ('Pcs', 'Potong / Biji'),
+    ('Unit', 'Per Unit'),
+    ('Bungkus', 'Bungkus / Pack Kecil'),
+    ('Box', 'Kotak / Kardus Sedang'),
+    ('Kg', 'Kilogram'),
+    ('Liter', 'Liter'),
+    ('Rim', 'Rim Kertas'),
+    ('Bal', 'Bal Karungan'),
+    ('Karton', 'Karton Besar'),
+    ('Dus', 'Dus Produk'),
+    ('Slop', 'Slop / Pack Panjang'),
+    ('Sachet', 'Sachet Kecil'),
+    ('Pack', 'Paket / Pack'),
+    ('Roll', 'Gulungan / Roll')
+on conflict (name) do nothing;
 
 
 -- ============================================================
@@ -170,8 +210,13 @@ create table if not exists public.stock_transactions (
 
     created_at timestamptz not null default now(),
 
-    constraint stock_transaction_quantity_positive
-        check (quantity > 0),
+    -- IN dan OUT wajib > 0.
+    -- OPNAME boleh 0 (opname yang hasilnya cocok / tanpa selisih).
+    constraint stock_transaction_quantity_valid
+        check (
+            (type = 'OPNAME' and quantity >= 0)
+            or (type <> 'OPNAME' and quantity > 0)
+        ),
 
     constraint stock_transaction_purchase_price_non_negative
         check (
@@ -393,6 +438,8 @@ execute function public.handle_new_user();
 
 -- ============================================================
 -- PRODUCT AUDIT LOG TRIGGER
+-- Note otomatis untuk UPDATE:
+--   '<pic> mengubah nama_produk, kategori, ...'
 -- ============================================================
 
 create or replace function public.handle_product_audit_log()
@@ -406,6 +453,7 @@ declare
     v_pic text;
     v_note text;
     v_target_user_id uuid;
+    v_changes text[] := '{}';
 begin
     if (TG_OP = 'DELETE') then
         v_target_user_id := OLD.user_id;
@@ -424,23 +472,11 @@ begin
 
     if (TG_OP = 'INSERT') then
         insert into public.product_logs (
-            user_id,
-            product_id,
-            product_name,
-            action,
-            pic,
-            note,
-            old_data,
-            new_data
+            user_id, product_id, product_name, action,
+            pic, note, old_data, new_data
         ) values (
-            NEW.user_id,
-            NEW.id,
-            NEW.name,
-            'CREATE',
-            v_pic,
-            null,
-            null,
-            to_jsonb(NEW)
+            NEW.user_id, NEW.id, NEW.name, 'CREATE',
+            v_pic, null, null, to_jsonb(NEW)
         );
         return NEW;
 
@@ -454,8 +490,8 @@ begin
             v_action := 'UPDATE';
         end if;
 
-        -- Ambil catatan transaksi dari stock_transactions untuk STOCK_IN / STOCK_OUT
         if (v_action in ('STOCK_IN', 'STOCK_OUT')) then
+            -- Catatan diambil dari transaksi stok terakhir
             select note into v_note
             from public.stock_transactions
             where product_id = NEW.id
@@ -463,49 +499,52 @@ begin
             order by created_at desc
             limit 1;
         else
-            v_note := null;
+            -- Kumpulkan kolom yang berubah
+            if OLD.name is distinct from NEW.name then
+                v_changes := array_append(v_changes, 'nama_produk');
+            end if;
+            if OLD.category_id is distinct from NEW.category_id then
+                v_changes := array_append(v_changes, 'kategori');
+            end if;
+            if OLD.sku is distinct from NEW.sku then
+                v_changes := array_append(v_changes, 'sku');
+            end if;
+            if OLD.purchase_price is distinct from NEW.purchase_price then
+                v_changes := array_append(v_changes, 'purchase_price');
+            end if;
+            if OLD.recommended_selling_price is distinct from NEW.recommended_selling_price then
+                v_changes := array_append(v_changes, 'recommended_selling_price');
+            end if;
+            if OLD.unit_id is distinct from NEW.unit_id then
+                v_changes := array_append(v_changes, 'unit');
+            end if;
+            if OLD.minimum_stock is distinct from NEW.minimum_stock then
+                v_changes := array_append(v_changes, 'minimum_stock');
+            end if;
+
+            if cardinality(v_changes) > 0 then
+                v_note := v_pic || ' mengubah ' || array_to_string(v_changes, ', ');
+            else
+                v_note := null;
+            end if;
         end if;
 
         insert into public.product_logs (
-            user_id,
-            product_id,
-            product_name,
-            action,
-            pic,
-            note,
-            old_data,
-            new_data
+            user_id, product_id, product_name, action,
+            pic, note, old_data, new_data
         ) values (
-            NEW.user_id,
-            NEW.id,
-            NEW.name,
-            v_action,
-            v_pic,
-            v_note,
-            to_jsonb(OLD),
-            to_jsonb(NEW)
+            NEW.user_id, NEW.id, NEW.name, v_action,
+            v_pic, v_note, to_jsonb(OLD), to_jsonb(NEW)
         );
         return NEW;
 
     elsif (TG_OP = 'DELETE') then
         insert into public.product_logs (
-            user_id,
-            product_id,
-            product_name,
-            action,
-            pic,
-            note,
-            old_data,
-            new_data
+            user_id, product_id, product_name, action,
+            pic, note, old_data, new_data
         ) values (
-            OLD.user_id,
-            OLD.id,
-            OLD.name,
-            'DELETE',
-            v_pic,
-            null,
-            to_jsonb(OLD),
-            null
+            OLD.user_id, OLD.id, OLD.name, 'DELETE',
+            v_pic, null, to_jsonb(OLD), null
         );
         return OLD;
     end if;
@@ -675,6 +714,9 @@ using (
 -- TRANSACTION POLICIES
 -- ============================================================
 
+drop policy if exists "Users can view own stock transactions"
+on public.stock_transactions;
+
 create policy "Users can view own stock transactions"
 on public.stock_transactions
 for select
@@ -692,6 +734,9 @@ using (
 -- ============================================================
 -- OPNAME POLICIES
 -- ============================================================
+
+drop policy if exists "Users can view own stock opnames"
+on public.stock_opnames;
 
 create policy "Users can view own stock opnames"
 on public.stock_opnames
@@ -979,7 +1024,7 @@ begin
 
     else
 
-        -- No stock adjustment.
+        -- No stock adjustment (quantity = 0 diizinkan khusus OPNAME).
         insert into public.stock_transactions (
             user_id,
             product_id,
@@ -1174,43 +1219,24 @@ create table if not exists public.store_settings (
 
 alter table public.store_settings enable row level security;
 
+drop policy if exists "Allow all access to store_settings"
+on public.store_settings;
+
 create policy "Allow all access to store_settings"
     on public.store_settings for all
     using (true);
 
+/// Jika database sudah berjalan, jangan jalankan ulang schema ini sebagai pengganti migration. create table if not exists tidak mengubah table yang sudah ada, jadi constraint lama tetap aktif. Jalankan ini sekali di SQL Editor:
 
--- ============================================================
--- UNITS (SATUAN BARANG)
--- ============================================================
+alter table public.stock_transactions
+    drop constraint if exists stock_transaction_quantity_positive;
 
-create table if not exists public.units (
-    id uuid primary key default gen_random_uuid(),
-    name text not null unique,
-    description text,
-    created_at timestamptz not null default now()
-);
+alter table public.stock_transactions
+    drop constraint if exists stock_transaction_quantity_valid;
 
-alter table public.units enable row level security;
-
-create policy "Allow all access to units"
-    on public.units for all
-    using (true);
-
--- Insert default units
-insert into public.units (name, description) values
-    ('Pcs', 'Potong / Biji'),
-    ('Unit', 'Per Unit'),
-    ('Bungkus', 'Bungkus / Pack Kecil'),
-    ('Box', 'Kotak / Kardus Sedang'),
-    ('Kg', 'Kilogram'),
-    ('Liter', 'Liter'),
-    ('Rim', 'Rim Kertas'),
-    ('Bal', 'Bal Karungan'),
-    ('Karton', 'Karton Besar'),
-    ('Dus', 'Dus Produk'),
-    ('Slop', 'Slop / Pack Panjang'),
-    ('Sachet', 'Sachet Kecil'),
-    ('Pack', 'Paket / Pack'),
-    ('Roll', 'Gulungan / Roll')
-on conflict (name) do nothing;
-```
+alter table public.stock_transactions
+    add constraint stock_transaction_quantity_valid
+    check (
+        (type = 'OPNAME' and quantity >= 0)
+        or (type <> 'OPNAME' and quantity > 0)
+    );

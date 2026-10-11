@@ -11,6 +11,7 @@ import 'package:flutter_catat_stok/module/product/domain/models/category.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../../core/widgets/barcode_scanner_screen.dart';
 import '../../../../core/utils/smooth_page_route.dart';
 import '../../../../core/widgets/app_card.dart';
 import '../../../../core/widgets/app_shimmer.dart';
@@ -160,7 +161,17 @@ class _ProductListScreenState extends State<ProductListScreen> {
                 size: 24,
                 color: AppColors.primary,
               ),
-              onPressed: () {
+              onPressed: () async {
+                final result = await Navigator.push<String>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const BarcodeScannerScreen(),
+                  ),
+                );
+                if (result != null && result.isNotEmpty) {
+                  _searchController.text = result;
+                  _onSearchChanged(result);
+                }
               },
             ),
           ),
@@ -288,148 +299,139 @@ class _ProductListScreenState extends State<ProductListScreen> {
 
           return RefreshIndicator(
             onRefresh: () async => _loadProducts(page: 1, isRefresh: true),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: AppCard(
-                padding: EdgeInsets.zero,
-                borderRadius: 16,
-                child: ListView.separated(
-                  key: const PageStorageKey('product_list'),
-                  controller: _scrollController,
-                  itemCount: products.length + (isLoadingMore ? 1 : 0),
-                  separatorBuilder: (_, __) =>
-                      const Divider(height: 1, color: AppColors.borderSubtle),
-                  itemBuilder: (context, index) {
-                    if (index == products.length) {
-                      return Padding(
-                        padding: const EdgeInsets.all(14.0),
-                        child: Row(
+            child: ListView.separated(
+              key: const PageStorageKey('product_list'),
+              controller: _scrollController,
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 30),
+              itemCount: products.length + (isLoadingMore ? 1 : 0),
+              separatorBuilder: (_, __) => const SizedBox(height: 10),
+              itemBuilder: (context, index) {
+                if (index == products.length) {
+                  return Padding(
+                    padding: const EdgeInsets.all(14.0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppShimmer.rectangle(width: 130, height: 14),
+                              const SizedBox(height: 6),
+                              AppShimmer.rectangle(width: 100, height: 12),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  AppShimmer.rectangle(width: 130, height: 14),
-                                  const SizedBox(height: 6),
-                                  AppShimmer.rectangle(width: 100, height: 12),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                AppShimmer.rectangle(width: 55, height: 14),
-                                const SizedBox(height: 6),
-                                AppShimmer.rectangle(width: 65, height: 12),
-                              ],
-                            ),
+                            AppShimmer.rectangle(width: 55, height: 14),
+                            const SizedBox(height: 6),
+                            AppShimmer.rectangle(width: 65, height: 12),
                           ],
                         ),
-                      );
-                    }
+                      ],
+                    ),
+                  );
+                }
 
-                    final item = products[index];
-                    return InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          SmoothPageRoute(
-                            page: ProductDetailScreen(selectedProduct: item),
-                          ),
-                        );
-                      },
-                      borderRadius: BorderRadius.vertical(
-                        top: index == 0
-                            ? const Radius.circular(16)
-                            : Radius.zero,
-                        bottom: index == products.length - 1
-                            ? const Radius.circular(16)
-                            : Radius.zero,
+                final item = products[index];
+                return InkWell(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      SmoothPageRoute(
+                        page: ProductDetailScreen(selectedProduct: item),
                       ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14.0),
-                        child: Row(
+                    );
+                  },
+                  borderRadius: BorderRadius.vertical(
+                    top: index == 0 ? const Radius.circular(16) : Radius.zero,
+                    bottom: index == products.length - 1
+                        ? const Radius.circular(16)
+                        : Radius.zero,
+                  ),
+                  child: AppCard(
+                    padding: const EdgeInsets.all(12),
+                    borderRadius: 14,
+                    child: Row(
+                      children: [
+                        _buildProductThumbnail(item.imageUrl),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.name,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.textPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'SKU: ${item.sku} • ${item.categoryName}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textMuted,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
-                            _buildProductThumbnail(item.imageUrl),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            RichText(
+                              text: TextSpan(
                                 children: [
-                                  Text(
-                                    item.name,
-                                    style: const TextStyle(
-                                      fontSize: 14,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textPrimary,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    'SKU: ${item.sku} • ${item.categoryName}',
-                                    style: const TextStyle(
+                                  const TextSpan(
+                                    text: 'Stok ',
+                                    style: TextStyle(
                                       fontSize: 12,
                                       color: AppColors.textMuted,
                                     ),
                                   ),
+                                  TextSpan(
+                                    text: '${item.currentStock}',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w800,
+                                      color: item.isLowStock
+                                          ? AppColors.stockOut
+                                          : AppColors.textPrimary,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                RichText(
-                                  text: TextSpan(
-                                    children: [
-                                      const TextSpan(
-                                        text: 'Stok ',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.textMuted,
-                                        ),
-                                      ),
-                                      TextSpan(
-                                        text: '${item.currentStock}',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w800,
-                                          color: item.isLowStock
-                                              ? AppColors.stockOut
-                                              : AppColors.textPrimary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  item.isLowStock
-                                      ? 'Menipis • ${CurrencyFormatter.format(item.recommendedSellingPrice.toDouble())}'
-                                      : CurrencyFormatter.format(
-                                          item.recommendedSellingPrice
-                                              .toDouble(),
-                                        ),
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: item.isLowStock
-                                        ? FontWeight.w600
-                                        : FontWeight.w400,
-                                    color: item.isLowStock
-                                        ? AppColors.stockOut
-                                        : AppColors.textMuted,
-                                  ),
-                                ),
-                              ],
+                            const SizedBox(height: 2),
+                            Text(
+                              item.isLowStock
+                                  ? 'Menipis • ${CurrencyFormatter.format(item.recommendedSellingPrice.toDouble())}'
+                                  : CurrencyFormatter.format(
+                                      item.recommendedSellingPrice.toDouble(),
+                                    ),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: item.isLowStock
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
+                                color: item.isLowStock
+                                    ? AppColors.stockOut
+                                    : AppColors.textMuted,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+                      ],
+                    ),
+                  ),
+                );
+              },
             ),
           );
         },

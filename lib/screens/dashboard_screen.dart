@@ -1,5 +1,6 @@
 // ignore_for_file: deprecated_member_use
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/extensions.dart';
 import 'package:flutter_catat_stok/core/services/local_storage_service.dart';
@@ -241,7 +242,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           AppShimmer.rectangle(width: 100, height: 20),
                         ] else ...[
                           Text(
-                            '${provider.products.length}',
+                            '${provider.productsSummary.length}',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -648,9 +649,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         : Icons.fact_check_outlined;
 
                     final String qtyText = isIn
-                        ? '+${item.stockDifferent} ${item.unit}'
+                        ? '+${item.stockDifferent} ${item.unit.name}'
                         : isOut
-                        ? '${item.stockDifferent} ${item.unit}'
+                        ? '${item.stockDifferent} ${item.unit.name}'
                         : '${item.stockDifferent > 0 ? "+" : ""}${item.stockDifferent} pcs';
 
                     return Padding(
@@ -660,15 +661,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       child: Row(
                         children: [
-                          Container(
-                            width: 32,
-                            height: 32,
-                            decoration: BoxDecoration(
-                              color: iconBg,
-                              shape: BoxShape.circle,
+                          if (item.imageUrl == null)
+                            Container(
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: iconBg,
+                              ),
+                              child: Icon(iconData, color: iconColor, size: 16),
+                            )
+                          else
+                            ClipRRect(
+                              borderRadius: BorderRadiusGeometry.circular(8),
+                              child: CachedNetworkImage(
+                                imageUrl: item.imageUrl!,
+                                width: 32,
+                                height: 32,
+                                fit: BoxFit.cover,
+                                placeholder: (context, url) =>
+                                    AppShimmer.rectangle(
+                                      width: 32,
+                                      height: 32,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                errorWidget: (context, url, error) =>
+                                    Container(
+                                      width: 32,
+                                      height: 32,
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surfaceContainer,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(
+                                        Icons.inventory_2_outlined,
+                                        size: 16,
+                                        color: AppColors.primary,
+                                      ),
+                                    ),
+                              ),
                             ),
-                            child: Icon(iconData, color: iconColor, size: 16),
-                          ),
                           const SizedBox(width: 12),
                           Expanded(
                             child: Column(

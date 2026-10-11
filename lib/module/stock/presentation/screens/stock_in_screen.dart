@@ -36,6 +36,7 @@ class _StockInScreenState extends State<StockInScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print('aaa ${widget.initialProduct?.name}');
       _selectedProduct.value = widget.initialProduct;
       if (widget.initialProduct != null) {
         _priceController.text = CurrencyInputFormatter.formatNumber(

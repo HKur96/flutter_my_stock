@@ -23,7 +23,14 @@ class StockRepositoryImpl implements StockRepository {
 
       var query = _client.from('product_logs').select('''
         *,
-        products(unit)
+        products(
+          image_url,
+          units(
+            id,
+            name,
+            description
+          )
+        )
       ''');
 
       // 1. Filter berdasarkan productId (jika ada)

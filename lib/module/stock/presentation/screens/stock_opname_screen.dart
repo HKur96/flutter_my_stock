@@ -640,7 +640,7 @@ class _StockOpnameScreenState extends State<StockOpnameScreen> {
     return ListenableBuilder(
       listenable: Listenable.merge([_actualStock, _systemStock]),
       builder: (context, _) {
-        final unit = _selectedProduct.value?.unit ?? 'pcs';
+        final unit = _selectedProduct.value?.unit.name ?? 'pcs';
         final purchasePrice =
             _selectedProduct.value?.purchasePrice.toDouble() ?? 0;
 
@@ -984,77 +984,72 @@ class _StockOpnameScreenState extends State<StockOpnameScreen> {
 
   // ── Bottom Submit Bar ───────────────────────────────────────────────
   Widget _buildBottomBar() {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: Container(
-        padding: EdgeInsets.fromLTRB(
-          16,
-          12,
-          16,
-          12 + MediaQuery.of(context).padding.bottom,
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        12 + MediaQuery.of(context).padding.bottom,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surface.withValues(alpha: 0.95),
+        border: const Border(
+          top: BorderSide(color: AppColors.border, width: 0.5),
         ),
-        decoration: BoxDecoration(
-          color: AppColors.surface.withValues(alpha: 0.95),
-          border: const Border(
-            top: BorderSide(color: AppColors.border, width: 0.5),
-          ),
-        ),
-        child: SafeArea(
-          top: false,
-          child: SizedBox(
-            height: 48,
-            child: ListenableBuilder(
-              listenable: Listenable.merge([
-                _isLoading,
-                _selectedProduct,
-                _actualStock,
-                _systemStock,
-                _selectedReason,
-              ]),
-              builder: (context, _) {
-                final isLoading = _isLoading.value;
-                final canSubmit = _canSubmit;
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 48,
+          child: ListenableBuilder(
+            listenable: Listenable.merge([
+              _isLoading,
+              _selectedProduct,
+              _actualStock,
+              _systemStock,
+              _selectedReason,
+            ]),
+            builder: (context, _) {
+              final isLoading = _isLoading.value;
+              // final canSubmit = _canSubmit;
 
-                return ElevatedButton(
-                  onPressed: (isLoading || !canSubmit) ? null : _handleSubmit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primaryAccent,
-                    foregroundColor: Colors.white,
-                    disabledBackgroundColor: AppColors.surfaceContainer,
-                    disabledForegroundColor: AppColors.textMuted,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    elevation: 0,
+              return ElevatedButton(
+                onPressed: (isLoading) ? null : _handleSubmit,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryAccent,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppColors.surfaceContainer,
+                  disabledForegroundColor: AppColors.textMuted,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  child: isLoading
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.check_circle_outline, size: 20),
-                            SizedBox(width: 8),
-                            Text(
-                              'Simpan Penyesuaian Opname',
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
+                  elevation: 0,
+                ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
                         ),
-                );
-              },
-            ),
+                      )
+                    : const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.check_circle_outline, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Simpan Penyesuaian Opname',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+              );
+            },
           ),
         ),
       ),

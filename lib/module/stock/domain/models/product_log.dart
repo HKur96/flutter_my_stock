@@ -1,11 +1,13 @@
 import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/core/utils/date_formatter.dart';
+import 'package:flutter_catat_stok/module/product/domain/models/unit_item.dart';
 
 class ProductLog {
   final String id;
   final String productId;
   final String productName;
-  final String unit;
+  final String? imageUrl;
+  final UnitItem unit;
   final ProductLogType productLogType;
   final String pic;
   final String? note;
@@ -17,6 +19,7 @@ class ProductLog {
     required this.id,
     required this.productId,
     required this.productName,
+    required this.imageUrl,
     required this.unit,
     required this.productLogType,
     required this.pic,
@@ -42,6 +45,7 @@ class ProductLog {
     String? id,
     String? productId,
     String? productName,
+    String? imageUrl,
     ProductLogType? productLogType,
     String? pic,
     String? note,
@@ -53,6 +57,7 @@ class ProductLog {
       id: id ?? this.id,
       productId: productId ?? this.productId,
       productName: productName ?? this.productName,
+      imageUrl: imageUrl ?? this.imageUrl,
       unit: unit,
       productLogType: productLogType ?? this.productLogType,
       pic: pic ?? this.pic,

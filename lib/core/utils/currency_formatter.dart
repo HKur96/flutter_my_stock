@@ -5,9 +5,12 @@ class CurrencyFormatter {
 
   static final NumberFormat _full =
       NumberFormat.currency(locale: 'id_ID', symbol: 'Rp', decimalDigits: 0);
+  static final NumberFormat _noSymbol =
+      NumberFormat.currency(locale: 'id_ID', symbol: '', decimalDigits: 0);
 
   /// Full format: Rp4.250.000
   static String format(double amount) => _full.format(amount);
+  static String formatNoSymbol(double amount) => _noSymbol.format(amount);
 
   /// Abbreviated format: Rp4,25 jt / Rp680 rb
   static String abbreviated(double amount) {

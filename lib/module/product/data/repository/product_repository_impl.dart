@@ -31,7 +31,12 @@ class ProductRepositoryImpl implements ProductRepository {
               current_stock,
               is_active,
               created_at,
-              updated_at
+              updated_at,
+              units(
+                id,
+                name,
+                description
+              )
             )
           ''')
           .order('created_at');

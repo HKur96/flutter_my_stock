@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'dart:async';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/core/widgets/empty_state_widget.dart';
@@ -548,19 +549,52 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                width: 34,
-                                height: 34,
-                                decoration: BoxDecoration(
-                                  color: iconBg,
-                                  borderRadius: BorderRadius.circular(10),
+                              if (item.imageUrl == null)
+                                Container(
+                                  width: 34,
+                                  height: 34,
+                                  decoration: BoxDecoration(
+                                    color: iconBg,
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Icon(
+                                    iconData,
+                                    color: iconColor,
+                                    size: 18,
+                                  ),
+                                )
+                              else
+                                ClipRRect(
+                                  borderRadius: BorderRadiusGeometry.circular(8),
+                                  child: CachedNetworkImage(
+                                    imageUrl: item.imageUrl!,
+                                    width: 34,
+                                    height: 34,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) =>
+                                        AppShimmer.rectangle(
+                                          width: 40,
+                                          height: 40,
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                    errorWidget: (context, url, error) =>
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: AppColors.surfaceContainer,
+                                            borderRadius: BorderRadius.circular(
+                                              10,
+                                            ),
+                                          ),
+                                          child: const Icon(
+                                            Icons.inventory_2_outlined,
+                                            size: 20,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                  ),
                                 ),
-                                child: Icon(
-                                  iconData,
-                                  color: iconColor,
-                                  size: 18,
-                                ),
-                              ),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Column(

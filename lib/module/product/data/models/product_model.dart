@@ -53,7 +53,7 @@ class ProductModel extends Product {
           ? DateTime.parse(json['updated_at'])
           : DateTime.now(),
       description: json['description'] ?? '',
-      imageUrl: json['image_url']?.toString(),
+      imageUrl: json['image_url'],
     );
   }
 }

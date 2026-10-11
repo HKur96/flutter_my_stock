@@ -10,6 +10,7 @@ import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provid
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
 import 'package:flutter_catat_stok/module/stock/presentation/provider/stock_provider.dart';
+import 'package:flutter_catat_stok/module/stock/presentation/screens/stock_opname_screen.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/config/enum.dart';
 import '../../../../core/theme/app_theme.dart';
@@ -55,11 +56,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ProductProvider>().selectedProduct = widget.selectedProduct;
       context.read<StockProvider>().getProductDetailLogs(
-            productId: widget.selectedProduct.id,
-            page: 1,
-            limit: 10,
-            isRefresh: true,
-          );
+        productId: widget.selectedProduct.id,
+        page: 1,
+        limit: 10,
+        isRefresh: true,
+      );
     });
   }
 
@@ -320,7 +321,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Row(
       children: [
         Expanded(
-          child: OutlinedButton.icon(
+          child: OutlinedButton(
             onPressed: () => Navigator.push(
               context,
               SmoothPageRoute(page: StockInScreen(initialProduct: p)),
@@ -331,13 +332,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               foregroundColor: AppColors.stockIn,
               side: const BorderSide(color: AppColors.stockInBorder),
             ),
-            icon: const Icon(Icons.south_west_rounded, size: 16),
-            label: const Text('Masuk', style: TextStyle(fontSize: 13)),
+            child: const Text('Masuk', style: TextStyle(fontSize: 13)),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: OutlinedButton.icon(
+          child: OutlinedButton(
             onPressed: () => Navigator.push(
               context,
               SmoothPageRoute(page: StockOutScreen(initialProduct: p)),
@@ -348,22 +348,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               backgroundColor: AppColors.surfaceCard,
               side: const BorderSide(color: AppColors.stockOutBorder),
             ),
-            icon: const Icon(Icons.north_east_rounded, size: 16),
-            label: const Text('Keluar', style: TextStyle(fontSize: 13)),
+            child: const Text('Keluar', style: TextStyle(fontSize: 13)),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: OutlinedButton.icon(
-            onPressed: () {},
+          child: OutlinedButton(
+            onPressed: () => Navigator.push(
+              context,
+              SmoothPageRoute(page: StockOpnameScreen(initialProduct: p)),
+            ),
             style: OutlinedButton.styleFrom(
               minimumSize: const Size(double.infinity, 42),
               foregroundColor: AppColors.warning,
               backgroundColor: AppColors.surfaceCard,
               side: const BorderSide(color: AppColors.warningBorder),
             ),
-            icon: const Icon(Icons.fact_check_outlined, size: 16),
-            label: const Text('Opname', style: TextStyle(fontSize: 13)),
+            child: const Text('Opname', style: TextStyle(fontSize: 13)),
           ),
         ),
       ],
@@ -578,9 +579,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             if (isLoading && productLogs.isEmpty)
               const AppCard(
                 padding: EdgeInsets.all(20),
-                child: Center(
-                  child: CircularProgressIndicator(),
-                ),
+                child: Center(child: CircularProgressIndicator()),
               )
             else if (productLogs.isEmpty)
               AppCard(
@@ -693,7 +692,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                                 '${isIn
                                     ? "+"
                                     : isOut
-                                    ? "-"
+                                    ? ""
                                     : ""}${log.stockDifferent} ${p.unit.name}',
                                 style: TextStyle(
                                   fontSize: 14,

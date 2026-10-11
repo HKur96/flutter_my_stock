@@ -1,8 +1,10 @@
 // ignore_for_file: deprecated_member_use
 
-import 'dart:typed_data';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_catat_stok/core/theme/app_theme.dart';
+import 'package:flutter_catat_stok/core/widgets/barcode_scanner_screen.dart';
 import 'package:flutter_catat_stok/core/config/enum.dart';
 import 'package:flutter_catat_stok/core/utils/currency_formatter.dart';
 import 'package:flutter_catat_stok/core/utils/currency_input_formatter.dart';
@@ -16,7 +18,6 @@ import 'package:flutter_catat_stok/module/product/presentation/provider/unit_pro
 import 'package:flutter_catat_stok/module/product/presentation/screens/manage_category_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
-import '../../../../core/theme/app_theme.dart';
 
 class AddEditProductScreen extends StatefulWidget {
   final Product? product;
@@ -59,10 +60,14 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
     );
     _minStock.value = p?.minimumStock ?? 4;
     _buyPriceController = TextEditingController(
-      text: p != null ? p.purchasePrice.toInt().toString() : '',
+      text: p != null
+          ? CurrencyFormatter.formatNoSymbol(p.purchasePrice.toDouble())
+          : '',
     );
     _sellPriceController = TextEditingController(
-      text: p != null ? p.recommendedSellingPrice.toInt().toString() : '',
+      text: p != null
+          ? CurrencyFormatter.formatNoSymbol(p.recommendedSellingPrice.toDouble())
+          : '',
     );
     _descriptionController = TextEditingController(text: p?.description ?? '');
     if (p != null) {
@@ -71,11 +76,14 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
           ? p.categoryName
           : null;
       _selectedUnit.value = p.unit;
+    } else {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _selectedUnit.value = context.read<UnitProvider>().units.first;
+      });
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkCategoryAndInit();
-      _selectedUnit.value = context.read<UnitProvider>().units.first;
     });
   }
 
@@ -440,94 +448,76 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                 controller: _nameController,
                 onTapOutside: (_) =>
                     FocusManager.instance.primaryFocus?.unfocus(),
+                textCapitalization: TextCapitalization.words,
                 decoration: const InputDecoration(
                   hintText: 'Indomie Goreng 85g',
                 ),
+                textInputAction: TextInputAction.next,
                 validator: (val) => val == null || val.trim().isEmpty
                     ? 'Nama produk wajib diisi'
                     : null,
               ),
               const SizedBox(height: 14),
-
+              _buildFieldLabel('Kategori *'),
+              ValueListenableBuilder<String?>(
+                valueListenable: _selectedCategory,
+                builder: (context, catVal, _) {
+                  final categories = context
+                      .watch<ProductProvider>()
+                      .categories;
+                  return DropdownButtonFormField<String>(
+                    value: catVal,
+                    isExpanded: true,
+                    items: categories.map((c) {
+                      return DropdownMenuItem(
+                        value: c.name,
+                        child: Text(c.name, overflow: TextOverflow.ellipsis),
+                      );
+                    }).toList(),
+                    onChanged: (val) => _selectedCategory.value = val,
+                    validator: (val) => val == null ? 'Pilih kategori' : null,
+                  );
+                },
+              ),
+              const SizedBox(height: 14),
+              // SKU Field
               Row(
-                spacing: 14,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Category Field
-                        _buildFieldLabel('Kategori *'),
-                        ValueListenableBuilder<String?>(
-                          valueListenable: _selectedCategory,
-                          builder: (context, catVal, _) {
-                            final categories = context
-                                .watch<ProductProvider>()
-                                .categories;
-                            return DropdownButtonFormField<String>(
-                              value: catVal,
-                              isExpanded: true,
-                              items: categories.map((c) {
-                                return DropdownMenuItem(
-                                  value: c.name,
-                                  child: Text(
-                                    c.name,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (val) => _selectedCategory.value = val,
-                              validator: (val) =>
-                                  val == null ? 'Pilih kategori' : null,
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      children: [
-                        // SKU Field
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            _buildFieldLabel('SKU (Kode Produk)'),
-                            const Text(
-                              'Opsional',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: AppColors.textMuted,
-                              ),
-                            ),
-                          ],
-                        ),
-                        TextFormField(
-                          controller: _skuController,
-                          onTapOutside: (_) =>
-                              FocusManager.instance.primaryFocus?.unfocus(),
-                          decoration: InputDecoration(
-                            hintText: 'MKN-001',
-                            suffixIcon: IconButton(
-                              icon: const Icon(
-                                Icons.qr_code_scanner_rounded,
-                                size: 20,
-                                color: AppColors.primary,
-                              ),
-                              onPressed: () {
-
-                                // TODO: QR CODE SCANNER IMPLEMENTATION
-                                final generated =
-                                    'SKU-${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}';
-                                _skuController.text = generated;
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                  _buildFieldLabel('SKU (Kode Produk)'),
+                  const Text(
+                    'Opsional',
+                    style: TextStyle(fontSize: 11, color: AppColors.textMuted),
                   ),
                 ],
+              ),
+              TextFormField(
+                controller: _skuController,
+                onTapOutside: (_) =>
+                    FocusManager.instance.primaryFocus?.unfocus(),
+                textInputAction: TextInputAction.next,
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(
+                  hintText: 'MKN-001',
+                  suffixIcon: IconButton(
+                    icon: const Icon(
+                      Icons.qr_code_scanner_rounded,
+                      size: 20,
+                      color: AppColors.primary,
+                    ),
+                    onPressed: () async {
+                      final result = await Navigator.push<String>(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const BarcodeScannerScreen(),
+                        ),
+                      );
+                      if (result != null && result.isNotEmpty) {
+                        _skuController.text = result;
+                      }
+                    },
+                  ),
+                ),
               ),
               const SizedBox(height: 14),
 
@@ -546,6 +536,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                           onTapOutside: (_) =>
                               FocusManager.instance.primaryFocus?.unfocus(),
                           inputFormatters: [CurrencyInputFormatter()],
+                          textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
                             prefixText: 'Rp ',
                             hintText: '0',
@@ -569,6 +560,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                           onTapOutside: (_) =>
                               FocusManager.instance.primaryFocus?.unfocus(),
                           inputFormatters: [CurrencyInputFormatter()],
+                          textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
                             prefixText: 'Rp ',
                             hintText: '0',
@@ -867,6 +859,10 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                           return TextFormField(
                             controller: _stockController,
                             keyboardType: TextInputType.number,
+                            textInputAction: TextInputAction.done,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
                             onTapOutside: (_) =>
                                 FocusManager.instance.primaryFocus?.unfocus(),
                             decoration: InputDecoration(
@@ -907,21 +903,6 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                   color: AppColors.textPrimary,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.stockInBg,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Text(
-                  'KOMPRESI OTOMATIS',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.stockIn,
-                  ),
                 ),
               ),
             ],
