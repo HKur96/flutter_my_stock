@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_catat_stok/core/config/global.dart';
+import 'package:flutter_catat_stok/core/theme/app_theme.dart';
 import '../../domain/models/unit_item.dart';
 import '../../domain/repository/unit_repository.dart';
 
@@ -37,18 +39,58 @@ class UnitProvider extends ChangeNotifier {
   }
 
   Future<bool> addUnit({required String name, String? description}) async {
-    final success = await _repository.addUnit(name, description: description);
-    if (success) {
-      await getUnits();
+    _isLoading = true;
+    notifyListeners();
+    try {
+      if (await _repository.addUnit(name, description: description)) {
+        _units = [
+          UnitItem(name: name, description: description, id: ''),
+          ..._units,
+        ];
+
+        ScaffoldMessenger.of(gNavigatorKey.currentContext!).showSnackBar(
+          const SnackBar(
+            content: Text('Unit berhasil ditambahkan!'),
+            backgroundColor: AppColors.stockIn,
+          ),
+        );
+        return true;
+      }
+
+      showFlashError('Gagal menambahkan satuan');
+      return false;
+    } catch (e) {
+      showFlashError('Gagal menambahkan satuan');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-    return success;
   }
 
   Future<bool> deleteUnit(String id) async {
-    final success = await _repository.deleteUnit(id);
-    if (success) {
-      await getUnits();
+    _isLoading = true;
+    notifyListeners();
+    try {
+      if (await _repository.deleteUnit(id)) {
+        _units = _units.where((x) => x.id != id).toList();
+        ScaffoldMessenger.of(gNavigatorKey.currentContext!).showSnackBar(
+          const SnackBar(
+            content: Text('Unit berhasil dihapus!'),
+            backgroundColor: AppColors.stockIn,
+          ),
+        );
+        return true;
+      }
+
+      showFlashError('Gagal menghapus satuan');
+      return false;
+    } catch (e) {
+      showFlashError('Gagal menambahkan satuan');
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
-    return success;
   }
 }
