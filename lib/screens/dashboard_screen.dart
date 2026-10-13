@@ -45,7 +45,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadDatas() async {
     await Future.wait([
-      context.read<ProductProvider>().getCategories(),
       context.read<ProductProvider>().getProductsSummary(),
       context.read<UnitProvider>().fetchUnits(),
       context.read<StockProvider>().getProductLogs(

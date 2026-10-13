@@ -214,7 +214,8 @@ class _ManageCategoryScreenState extends State<ManageCategoryScreen> {
               ),
             ),
       body: RefreshIndicator(
-        onRefresh: () => _productProvider.getCategories(),
+        onRefresh: () =>
+            _productProvider.getCategories(true),
         child: SingleChildScrollView(
           key: const PageStorageKey('manage_category_screen'),
           physics: const AlwaysScrollableScrollPhysics(),

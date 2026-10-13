@@ -33,7 +33,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Future<void> _checkCategories() async {
     final productProvider = context.read<ProductProvider>();
-    await productProvider.getCategories();
+    await productProvider.getCategories(false);
     if (!mounted) return;
     if (productProvider.categories.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -54,19 +54,26 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> screens = [
-      DashboardScreen(
-        onNavigateToTab: (idx) => setState(() => _currentIndex = idx),
-      ),
-      const ProductListScreen(),
-      const HistoryScreen(),
-      const ProfileScreen(),
-    ];
-
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: screens,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300), // Durasi animasi transisi
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          // Efek transisi Fade (muncul perlahan) dikombinasikan dengan Scale
+          return FadeTransition(
+            opacity: animation,
+            child: ScaleTransition(
+              scale: Tween<double>(begin: 0.95, end: 1.0).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        // Menentukan layar mana yang aktif berdasarkan _currentIndex
+        child: KeyedSubtree(
+          key: ValueKey<int>(
+            _currentIndex,
+          ), // Key sangat penting agar AnimatedSwitcher mendeteksi perubahan
+          child: _getScreenForIndex(_currentIndex),
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
@@ -146,5 +153,22 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
       ),
     );
+  }
+
+  Widget _getScreenForIndex(int currentIndex) {
+    switch (currentIndex) {
+      case 0:
+        return DashboardScreen(
+          onNavigateToTab: (idx) => setState(() => _currentIndex = idx),
+        );
+      case 1:
+        return const ProductListScreen();
+      case 2:
+        return const HistoryScreen();
+      case 3:
+        return const ProfileScreen();
+      default:
+        return const DashboardScreen();
+    }
   }
 }

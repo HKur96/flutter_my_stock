@@ -82,7 +82,7 @@ class _ProductListScreenState extends State<ProductListScreen> {
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProductProvider>().getCategories();
+      context.read<ProductProvider>().getCategories(false);
       _loadProducts(page: 1, isRefresh: true);
     });
   }

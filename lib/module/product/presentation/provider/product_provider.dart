@@ -67,11 +67,19 @@ class ProductProvider with ChangeNotifier {
     return _productsSummary.where((x) => x.isLowStock).toList();
   }
 
-  Future<void> getCategories() async {
+  Future<void> getCategories(bool isRefresh) async {
     _isLoading = true;
     notifyListeners();
 
     try {
+      if (!isRefresh && _categories.isNotEmpty) {
+        _isLoading = false;
+        print('[GetCategories] Categories is cached.');
+        notifyListeners();
+        return;
+      }
+
+      print('[GetCategories] Fetching categories from API...');
       final response = await _productRepository.getCategories();
       _categories = response;
     } catch (e) {
