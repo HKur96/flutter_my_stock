@@ -33,7 +33,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   Future<void> _checkCategories() async {
     final productProvider = context.read<ProductProvider>();
-    await productProvider.getCategories(false);
+    await productProvider.getCategories(isRefresh: false);
     if (!mounted) return;
     if (productProvider.categories.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(

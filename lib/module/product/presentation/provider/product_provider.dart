@@ -67,7 +67,7 @@ class ProductProvider with ChangeNotifier {
     return _productsSummary.where((x) => x.isLowStock).toList();
   }
 
-  Future<void> getCategories(bool isRefresh) async {
+  Future<void> getCategories({bool isRefresh = false}) async {
     _isLoading = true;
     notifyListeners();
 

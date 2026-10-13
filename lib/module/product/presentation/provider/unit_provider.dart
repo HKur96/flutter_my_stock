@@ -15,12 +15,18 @@ class UnitProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
-  Future<void> fetchUnits() async {
+  Future<void> getUnits({bool isRefresh = false}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
+      if (!isRefresh && _units.isNotEmpty) {
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
       _units = await _repository.getUnits();
     } catch (e) {
       _errorMessage = 'Gagal memuat daftar satuan';
@@ -33,7 +39,7 @@ class UnitProvider extends ChangeNotifier {
   Future<bool> addUnit({required String name, String? description}) async {
     final success = await _repository.addUnit(name, description: description);
     if (success) {
-      await fetchUnits();
+      await getUnits();
     }
     return success;
   }
@@ -41,7 +47,7 @@ class UnitProvider extends ChangeNotifier {
   Future<bool> deleteUnit(String id) async {
     final success = await _repository.deleteUnit(id);
     if (success) {
-      await fetchUnits();
+      await getUnits();
     }
     return success;
   }

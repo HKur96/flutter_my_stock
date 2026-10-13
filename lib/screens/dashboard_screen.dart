@@ -46,7 +46,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _loadDatas() async {
     await Future.wait([
       context.read<ProductProvider>().getProductsSummary(),
-      context.read<UnitProvider>().fetchUnits(),
+      context.read<UnitProvider>().getUnits(),
       context.read<StockProvider>().getProductLogs(
         page: 1,
         limit: 5,
@@ -654,9 +654,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             Container(
                               width: 32,
                               height: 32,
-                              decoration: BoxDecoration(
-                                color: iconBg,
-                              ),
+                              decoration: BoxDecoration(color: iconBg),
                               child: Icon(iconData, color: iconColor, size: 16),
                             )
                           else
@@ -673,20 +671,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                       height: 32,
                                       borderRadius: BorderRadius.circular(8),
                                     ),
-                                errorWidget: (context, url, error) =>
-                                    Container(
-                                      width: 32,
-                                      height: 32,
-                                      decoration: BoxDecoration(
-                                        color: AppColors.surfaceContainer,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: const Icon(
-                                        Icons.inventory_2_outlined,
-                                        size: 16,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
+                                errorWidget: (context, url, error) => Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surfaceContainer,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: const Icon(
+                                    Icons.inventory_2_outlined,
+                                    size: 16,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
                               ),
                             ),
                           const SizedBox(width: 12),

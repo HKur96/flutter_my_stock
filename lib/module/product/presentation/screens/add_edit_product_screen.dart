@@ -250,7 +250,7 @@ class _AddEditProductScreenState extends State<AddEditProductScreen> {
 
   Future<void> _checkCategoryAndInit() async {
     final provider = context.read<ProductProvider>();
-    await provider.getCategories(false);
+    await provider.getCategories(isRefresh: false);
     
     if (!mounted) return;
 

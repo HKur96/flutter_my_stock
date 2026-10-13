@@ -14,11 +14,15 @@ class ManageUnitScreen extends StatefulWidget {
 }
 
 class _ManageUnitScreenState extends State<ManageUnitScreen> {
+  Future<void> _loadUnits({bool isRefresh = false}) async {
+    await context.read<UnitProvider>().getUnits(isRefresh: isRefresh);
+  }
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<UnitProvider>().fetchUnits();
+      _loadUnits();
     });
   }
 
@@ -178,7 +182,7 @@ class _ManageUnitScreenState extends State<ManageUnitScreen> {
         ),
       ),
       body: RefreshIndicator(
-        onRefresh: () => context.read<UnitProvider>().fetchUnits(),
+        onRefresh: () => _loadUnits(isRefresh: true),
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.all(20.0),
@@ -309,7 +313,8 @@ class _ManageUnitScreenState extends State<ManageUnitScreen> {
                     color: AppColors.textPrimary,
                   ),
                 ),
-                if (item.description != null && item.description!.isNotEmpty) ...[
+                if (item.description != null &&
+                    item.description!.isNotEmpty) ...[
                   const SizedBox(height: 2),
                   Text(
                     item.description!,
@@ -334,7 +339,9 @@ class _ManageUnitScreenState extends State<ManageUnitScreen> {
                 builder: (ctx) => AlertDialog(
                   backgroundColor: AppColors.surfaceCard,
                   title: const Text('Hapus Satuan?'),
-                  content: Text('Apakah Anda yakin ingin menghapus satuan "${item.name}"?'),
+                  content: Text(
+                    'Apakah Anda yakin ingin menghapus satuan "${item.name}"?',
+                  ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
