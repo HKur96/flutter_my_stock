@@ -27,7 +27,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<StoreSettingsProvider>().fetchStoreSettings();
+      context.read<StoreSettingsProvider>().fetchStoreSettings(isRefresh: false);
     });
   }
 

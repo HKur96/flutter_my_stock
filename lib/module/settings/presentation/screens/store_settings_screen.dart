@@ -35,7 +35,7 @@ class _StoreSettingsScreenState extends State<StoreSettingsScreen> {
 
   void _loadData() async {
     final provider = context.read<StoreSettingsProvider>();
-    await provider.fetchStoreSettings();
+    await provider.fetchStoreSettings(isRefresh: false);
     if (mounted && provider.settings != null) {
       final s = provider.settings!;
       _nameController.text = s.storeName;

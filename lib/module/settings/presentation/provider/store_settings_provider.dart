@@ -17,12 +17,17 @@ class StoreSettingsProvider extends ChangeNotifier {
   bool get isSaving => _isSaving;
   String? get errorMessage => _errorMessage;
 
-  Future<void> fetchStoreSettings() async {
+  Future<void> fetchStoreSettings({bool isRefresh = false}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
+      if (!isRefresh && _settings != null) {
+        notifyListeners();
+        return;
+      }
+
       _settings = await _repository.getStoreSettings();
     } catch (e) {
       _errorMessage = 'Gagal memuat pengaturan toko';
