@@ -85,10 +85,9 @@ class _StockOpnameScreenState extends State<StockOpnameScreen> {
   }
 
   Future<void> _openProductSearch() async {
-    final products = context.read<ProductProvider>().products;
     final selected = await showSearch<Product?>(
       context: context,
-      delegate: ProductSearchDelegate(products),
+      delegate: ProductSearchDelegate(),
     );
     if (selected != null) {
       _onProductSelected(selected);

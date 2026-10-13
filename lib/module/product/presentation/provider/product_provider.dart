@@ -23,25 +23,39 @@ class ProductProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  int _productRequestId = 0;
+  String? _productErrorDelegate;
+  String? get productErrorDelegate => _productErrorDelegate;
+
   List<CategoryItem> _categories = [];
   List<Product> _products = [];
+  List<Product> _productsDelegate = [];
   List<ProductSummary> _productsSummary = [];
   bool _isLoading = false;
   bool _isLoadingProduct = false;
+  bool _isLoadingProductDelegate = false;
   bool _isLoadingProductSummary = false;
   bool _isLoadingMoreProduct = false;
+  bool _isLoadingMoreProductDelegate = false;
   bool _hasMoreProduct = true;
+  bool _hasMoreProductDelegate = false;
   int _currentProductPage = 1;
+  int _currentProductDelegatePage = 1;
 
   List<CategoryItem> get categories => _categories;
   List<Product> get products => _products;
+  List<Product> get productsDelegate => _productsDelegate;
   List<ProductSummary> get productsSummary => _productsSummary;
   bool get isLoading => _isLoading;
   bool get isLoadingProduct => _isLoadingProduct;
+  bool get isLoadingProductDelegate => _isLoadingProductDelegate;
   bool get isLoadingProductSummary => _isLoadingProductSummary;
   bool get isLoadingMoreProduct => _isLoadingMoreProduct;
+  bool get isLoadingMoreProductDelegate => _isLoadingMoreProductDelegate;
   bool get hasMoreProduct => _hasMoreProduct;
+  bool get hasMoreProductDelegate => _hasMoreProductDelegate;
   int get currentProductPage => _currentProductPage;
+  int get currentProductDelegatePage => _currentProductDelegatePage;
 
   // Products
   double get totalValue => _productsSummary.fold(
@@ -336,6 +350,69 @@ class ProductProvider with ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<List<Product>> getProductDelegate({
+    int page = 1,
+    int limit = 10,
+    String? searchQuery,
+    String? categoryId,
+    bool isRefresh = false,
+  }) async {
+    final isFirstPage = isRefresh || page == 1;
+
+    // Hanya load-more yang diblok saat ada request berjalan.
+    // Request halaman pertama (search baru) selalu boleh, request lama jadi basi.
+    if (!isFirstPage &&
+        (_isLoadingProductDelegate || _isLoadingMoreProductDelegate)) {
+      return _productsDelegate;
+    }
+
+    final requestId = ++_productRequestId;
+
+    if (isFirstPage) {
+      _isLoadingProductDelegate = true;
+      _isLoadingMoreProductDelegate = false;
+      _currentProductDelegatePage = 1;
+      _hasMoreProductDelegate = true;
+      _productErrorDelegate = null;
+    } else {
+      _isLoadingMoreProductDelegate = true;
+    }
+    notifyListeners();
+
+    try {
+      final response = await _productRepository.getProducts(
+        page: page,
+        limit: limit,
+        searchQuery: searchQuery,
+        categoryId: categoryId,
+      );
+
+      // Ada request yang lebih baru, abaikan hasil ini
+      if (requestId != _productRequestId) return _productsDelegate;
+
+      if (isFirstPage) {
+        _productsDelegate = response;
+      } else {
+        _productsDelegate.addAll(response);
+      }
+
+      _currentProductDelegatePage = page;
+      _hasMoreProductDelegate = response.length >= limit;
+      return _productsDelegate;
+    } catch (e) {
+      if (requestId == _productRequestId) {
+        _productErrorDelegate = 'Gagal memuat produk';
+      }
+      return _productsDelegate;
+    } finally {
+      if (requestId == _productRequestId) {
+        _isLoadingProductDelegate = false;
+        _isLoadingMoreProductDelegate = false;
+        notifyListeners();
+      }
     }
   }
 }

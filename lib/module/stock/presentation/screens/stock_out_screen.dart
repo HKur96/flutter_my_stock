@@ -56,10 +56,10 @@ class _StockOutScreenState extends State<StockOutScreen> {
     super.dispose();
   }
 
-  Future<void> _openProductSearch(List<Product> products) async {
+  Future<void> _openProductSearch() async {
     final selected = await showSearch<Product?>(
       context: context,
-      delegate: ProductSearchDelegate(products),
+      delegate: ProductSearchDelegate(),
     );
     if (selected != null) {
       _selectedProduct.value = selected;
@@ -201,7 +201,6 @@ class _StockOutScreenState extends State<StockOutScreen> {
         child: ValueListenableBuilder<Product?>(
           valueListenable: _selectedProduct,
           builder: (context, selectedProduct, child) {
-            final products = context.watch<ProductProvider>().products;
             final currentStock = selectedProduct?.currentStock ?? 0;
             final unit = selectedProduct?.unit.name ?? 'pcs';
 
@@ -211,7 +210,6 @@ class _StockOutScreenState extends State<StockOutScreen> {
                 // Selected Product Card
                 _buildProductSelection(
                   selectedProduct,
-                  products,
                   currentStock,
                   unit,
                 ),
@@ -592,13 +590,12 @@ class _StockOutScreenState extends State<StockOutScreen> {
 
   Widget _buildProductSelection(
     Product? selectedProduct,
-    List<Product> products,
     int currentStock,
     String unit,
   ) {
     if (selectedProduct == null) {
       return AppCard(
-        onTap: () => _openProductSearch(products),
+        onTap: () => _openProductSearch(),
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
@@ -629,7 +626,7 @@ class _StockOutScreenState extends State<StockOutScreen> {
     }
 
     return AppCard(
-      onTap: () => _openProductSearch(products),
+      onTap: () => _openProductSearch(),
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [

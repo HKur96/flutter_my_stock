@@ -69,10 +69,10 @@ class _StockInScreenState extends State<StockInScreen> {
     }
   }
 
-  Future<void> _openProductSearch(List<Product> products) async {
+  Future<void> _openProductSearch() async {
     final selected = await showSearch<Product?>(
       context: context,
-      delegate: ProductSearchDelegate(products),
+      delegate: ProductSearchDelegate(),
     );
     if (selected != null) {
       _selectedProduct.value = selected;
@@ -187,7 +187,6 @@ class _StockInScreenState extends State<StockInScreen> {
         child: ValueListenableBuilder<Product?>(
           valueListenable: _selectedProduct,
           builder: (context, selectedProduct, child) {
-            final products = context.watch<ProductProvider>().products;
             final currentStock = _selectedProduct.value?.currentStock ?? 0;
             final unit = _selectedProduct.value?.unit.name ?? 'pcs';
 
@@ -197,7 +196,6 @@ class _StockInScreenState extends State<StockInScreen> {
                 // Selected Product Preview Card (Match Stitch 07_stok_masuk)
                 _buildProductSelection(
                   selectedProduct,
-                  products,
                   currentStock,
                   unit,
                 ),
@@ -250,13 +248,12 @@ class _StockInScreenState extends State<StockInScreen> {
 
   Widget _buildProductSelection(
     Product? selectedProduct,
-    List<Product> products,
     int currentStock,
     String unit,
   ) {
     if (selectedProduct == null) {
       return AppCard(
-        onTap: () => _openProductSearch(products),
+        onTap: () => _openProductSearch(),
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
@@ -287,7 +284,7 @@ class _StockInScreenState extends State<StockInScreen> {
     }
 
     return AppCard(
-      onTap: () => _openProductSearch(products),
+      onTap: () => _openProductSearch(),
       padding: const EdgeInsets.all(14),
       child: Row(
         children: [
