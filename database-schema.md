@@ -1,1242 +1,557 @@
 -- ============================================================
--- PERSONAL STOCK MANAGER
--- SUPABASE DATABASE SCHEMA
+-- PERSONAL STOCK MANAGER + ORDER RUMAH
+-- FULL DATABASE SCHEMA CREATION SCRIPT (OWNER + OPERATOR MODEL)
 -- ============================================================
 
--- ============================================================
--- EXTENSIONS
--- ============================================================
+begin;
 
-create extension if not exists pgcrypto;
+---
 
+-- 0. CUSTOM TYPES / ENUMS
 
--- ============================================================
--- ENUMS
--- ============================================================
+---
 
-do $$
-begin
-    create type stock_transaction_type as enum (
-        'IN',
-        'OUT',
-        'OPNAME'
-    );
-exception
-    when duplicate_object then null;
-end $$;
+create type public.user_role as enum ('OWNER', 'OPERATOR');
+create type public.stock_transaction_type as enum ('IN', 'OUT', 'ADJUSTMENT');
+create type public.picking_status as enum ('PENDING', 'PARTIAL', 'PICKED');
+create type public.verification_result as enum ('MATCH', 'MISMATCH', 'DAMAGED');
+create type public.verification_reason as enum ('WRONG_ITEM', 'MISSING_QUANTITY', 'DAMAGED_ITEM', 'OTHER');
 
+---
 
--- ============================================================
--- PROFILES
--- ============================================================
+-- 1. TABLES CREATION
 
-create table if not exists public.profiles (
-    id uuid primary key
-        references auth.users(id)
-        on delete cascade,
+---
 
-    name text,
-
-    created_at timestamptz not null default now(),
-
-    updated_at timestamptz not null default now()
+-- PROFILES (extends auth.users)
+create table public.profiles (
+id uuid not null,
+name text,
+role public.user_role not null default 'OPERATOR'::public.user_role,
+owner_id uuid,
+created_at timestamptz not null default now(),
+updated_at timestamptz not null default now(),
+constraint profiles_pkey primary key (id),
+constraint profiles_id_fkey foreign key (id) references auth.users(id) on delete cascade,
+constraint profiles_owner_id_fkey foreign key (owner_id) references public.profiles(id) on delete cascade,
+constraint profiles_role_owner_id_consistency check (
+(role = 'OWNER' and owner_id is null)
+or
+(role = 'OPERATOR' and owner_id is not null and owner_id <> id)
+)
 );
 
+-- UNITS
+create table public.units (
+id uuid not null default gen_random_uuid(),
+name varchar not null unique,
+description text,
+created_at timestamptz default now(),
+constraint units_pkey primary key (id)
+);
 
--- ============================================================
 -- CATEGORIES
--- ============================================================
-
-create table if not exists public.categories (
-    id uuid primary key default gen_random_uuid(),
-
-    user_id uuid not null
-        references auth.users(id)
-        on delete cascade,
-
-    name text not null,
-
-    created_at timestamptz not null default now(),
-
-    updated_at timestamptz not null default now(),
-
-    constraint categories_name_not_empty
-        check (length(trim(name)) > 0),
-
-    constraint categories_user_name_unique
-        unique (user_id, name)
+create table public.categories (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+name text not null check (length(trim(both from name)) > 0),
+created_at timestamptz not null default now(),
+updated_at timestamptz not null default now(),
+constraint categories_pkey primary key (id),
+constraint categories_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade
 );
 
-
--- ============================================================
--- UNITS (SATUAN BARANG)
--- Harus dibuat SEBELUM products karena products.unit_id
--- mereferensikan table ini.
--- ============================================================
-
-create table if not exists public.units (
-    id uuid primary key default gen_random_uuid(),
-    name text not null unique,
-    description text,
-    created_at timestamptz not null default now()
-);
-
-alter table public.units enable row level security;
-
-drop policy if exists "Allow all access to units"
-on public.units;
-
-create policy "Allow all access to units"
-    on public.units for all
-    using (true);
-
--- Insert default units
-insert into public.units (name, description) values
-    ('Pcs', 'Potong / Biji'),
-    ('Unit', 'Per Unit'),
-    ('Bungkus', 'Bungkus / Pack Kecil'),
-    ('Box', 'Kotak / Kardus Sedang'),
-    ('Kg', 'Kilogram'),
-    ('Liter', 'Liter'),
-    ('Rim', 'Rim Kertas'),
-    ('Bal', 'Bal Karungan'),
-    ('Karton', 'Karton Besar'),
-    ('Dus', 'Dus Produk'),
-    ('Slop', 'Slop / Pack Panjang'),
-    ('Sachet', 'Sachet Kecil'),
-    ('Pack', 'Paket / Pack'),
-    ('Roll', 'Gulungan / Roll')
-on conflict (name) do nothing;
-
-
--- ============================================================
 -- PRODUCTS
--- ============================================================
-
-create table if not exists public.products (
-    id uuid primary key default gen_random_uuid(),
-
-    user_id uuid not null
-        references auth.users(id)
-        on delete cascade,
-
-    category_id uuid not null
-        references public.categories(id)
-        on delete restrict,
-
-    name text not null,
-
-    sku text,
-
-    unit_id uuid
-        references public.units(id)
-        on delete restrict,
-
-    description text,
-
-    image_url text,
-
-    purchase_price numeric(15,2) not null default 0,
-
-    recommended_selling_price numeric(15,2) not null default 0,
-
-    minimum_stock integer not null default 0,
-
-    current_stock integer not null default 0,
-
-    is_active boolean not null default true,
-
-    created_at timestamptz not null default now(),
-
-    updated_at timestamptz not null default now(),
-
-    constraint products_name_not_empty
-        check (length(trim(name)) > 0),
-
-    constraint products_purchase_price_non_negative
-        check (purchase_price >= 0),
-
-    constraint products_selling_price_non_negative
-        check (recommended_selling_price >= 0),
-
-    constraint products_minimum_stock_non_negative
-        check (minimum_stock >= 0),
-
-    constraint products_current_stock_non_negative
-        check (current_stock >= 0)
+create table public.products (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+category_id uuid not null,
+unit_id uuid not null,
+name text not null check (length(trim(both from name)) > 0),
+sku text,
+description text,
+image_url text,
+purchase_price numeric not null default 0 check (purchase_price >= 0::numeric),
+recommended_selling_price numeric not null default 0 check (recommended_selling_price >= 0::numeric),
+minimum_stock integer not null default 0 check (minimum_stock >= 0),
+current_stock integer not null default 0 check (current_stock >= 0),
+is_active boolean not null default true,
+created_at timestamptz not null default now(),
+updated_at timestamptz not null default now(),
+constraint products_pkey primary key (id),
+constraint products_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade,
+constraint products_category_id_fkey foreign key (category_id) references public.categories(id) on delete restrict,
+constraint products_unit_id_fkey foreign key (unit_id) references public.units(id) on delete restrict
 );
 
-
--- ============================================================
--- UNIQUE SKU PER USER
--- SKU OPTIONAL
--- ============================================================
-
-create unique index if not exists products_user_sku_unique
-on public.products(user_id, sku)
-where sku is not null;
-
-
--- ============================================================
 -- STOCK TRANSACTIONS
--- ============================================================
-
-create table if not exists public.stock_transactions (
-    id uuid primary key default gen_random_uuid(),
-
-    user_id uuid not null
-        references auth.users(id)
-        on delete cascade,
-
-    product_id uuid not null
-        references public.products(id)
-        on delete restrict,
-
-    type stock_transaction_type not null,
-
-    quantity integer not null,
-
-    adjustment integer not null,
-
-    purchase_price numeric(15,2),
-
-    reason text,
-
-    note text,
-
-    stock_before integer not null,
-
-    stock_after integer not null,
-
-    created_at timestamptz not null default now(),
-
-    -- IN dan OUT wajib > 0.
-    -- OPNAME boleh 0 (opname yang hasilnya cocok / tanpa selisih).
-    constraint stock_transaction_quantity_valid
-        check (
-            (type = 'OPNAME' and quantity >= 0)
-            or (type <> 'OPNAME' and quantity > 0)
-        ),
-
-    constraint stock_transaction_purchase_price_non_negative
-        check (
-            purchase_price is null
-            or purchase_price >= 0
-        )
+create table public.stock_transactions (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+product_id uuid not null,
+type public.stock_transaction_type not null,
+quantity integer not null,
+adjustment integer not null,
+purchase_price numeric check (purchase_price is null or purchase_price >= 0::numeric),
+reason text,
+note text,
+stock_before integer not null,
+stock_after integer not null,
+created_at timestamptz not null default now(),
+constraint stock_transactions_pkey primary key (id),
+constraint stock_transactions_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade,
+constraint stock_transactions_product_id_fkey foreign key (product_id) references public.products(id) on delete cascade
 );
 
-
--- ============================================================
 -- STOCK OPNAMES
--- ============================================================
-
-create table if not exists public.stock_opnames (
-    id uuid primary key default gen_random_uuid(),
-
-    user_id uuid not null
-        references auth.users(id)
-        on delete cascade,
-
-    product_id uuid not null
-        references public.products(id)
-        on delete restrict,
-
-    transaction_id uuid
-        references public.stock_transactions(id)
-        on delete restrict,
-
-    system_stock integer not null,
-
-    physical_stock integer not null,
-
-    difference integer not null,
-
-    note text,
-
-    created_at timestamptz not null default now(),
-
-    constraint stock_opname_system_stock_non_negative
-        check (system_stock >= 0),
-
-    constraint stock_opname_physical_stock_non_negative
-        check (physical_stock >= 0),
-
-    constraint stock_opname_difference_check
-        check (difference = physical_stock - system_stock)
+create table public.stock_opnames (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+product_id uuid not null,
+transaction_id uuid,
+system_stock integer not null check (system_stock >= 0),
+physical_stock integer not null check (physical_stock >= 0),
+difference integer not null,
+note text,
+created_at timestamptz not null default now(),
+constraint stock_opnames_pkey primary key (id),
+constraint stock_opnames_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade,
+constraint stock_opnames_product_id_fkey foreign key (product_id) references public.products(id) on delete cascade,
+constraint stock_opnames_transaction_id_fkey foreign key (transaction_id) references public.stock_transactions(id) on delete set null
 );
 
-
--- ============================================================
--- PRODUCT LOGS (AUDIT TRAIL)
--- ============================================================
-
-create table if not exists public.product_logs (
-    id uuid primary key default gen_random_uuid(),
-
-    user_id uuid not null
-        references auth.users(id)
-        on delete cascade,
-
-    product_id uuid
-        references public.products(id)
-        on delete set null,
-
-    product_name text not null,
-
-    action text not null,
-
-    pic text,
-
-    note text,
-
-    old_data jsonb,
-
-    new_data jsonb,
-
-    created_at timestamptz not null default now(),
-
-    constraint product_logs_action_check
-        check (action in ('CREATE', 'UPDATE', 'DELETE', 'STOCK_IN', 'STOCK_OUT'))
+-- PRODUCT LOGS
+create table public.product_logs (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+product_id uuid,
+product_name text not null,
+action text not null check (action = any (array['CREATE'::text, 'UPDATE'::text, 'DELETE'::text, 'STOCK_IN'::text, 'STOCK_OUT'::text])),
+old_data jsonb,
+new_data jsonb,
+pic text,
+note text,
+created_at timestamptz not null default now(),
+constraint product_logs_pkey primary key (id),
+constraint product_logs_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade,
+constraint product_logs_product_id_fkey foreign key (product_id) references public.products(id) on delete set null
 );
 
+-- STORE SETTINGS
+create table public.store_settings (
+id uuid not null default gen_random_uuid(),
+user_id uuid,
+store_name varchar not null default 'Warung Saya'::character varying,
+address text,
+phone_number varchar,
+header_footer_note text,
+created_at timestamptz default now(),
+updated_at timestamptz default now(),
+constraint store_settings_pkey primary key (id),
+constraint store_settings_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade
+);
 
--- ============================================================
--- INDEXES
--- ============================================================
+-- ORDERS
+create table public.orders (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+order_number text not null,
+marketplace text,
+customer_note text,
+status text not null default 'QUEUED'::text,
+version integer not null default 1 check (version > 0),
+queue_position bigint,
+cancel_reason text,
+completed_at timestamptz,
+cancelled_at timestamptz,
+created_at timestamptz not null default now(),
+updated_at timestamptz not null default now(),
+constraint orders_pkey primary key (id),
+constraint orders_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade,
+constraint orders_user_number_key unique (user_id, order_number)
+);
 
-create index if not exists categories_user_id_idx
-on public.categories(user_id);
+-- ORDER ITEMS
+create table public.order_items (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+order_id uuid not null,
+product_id uuid not null,
+sku_snapshot text not null,
+name_snapshot text not null,
+variant_snapshot text,
+location_snapshot text not null,
+photo_snapshot text,
+quantity_required integer not null check (quantity_required > 0),
+created_at timestamptz not null default now(),
+updated_at timestamptz not null default now(),
+constraint order_items_pkey primary key (id),
+constraint order_items_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade,
+constraint order_items_order_id_fkey foreign key (order_id) references public.orders(id) on delete cascade,
+constraint order_items_product_id_fkey foreign key (product_id) references public.products(id) on delete restrict
+);
 
+-- ORDER ITEM PICKINGS
+create table public.order_item_pickings (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+order_item_id uuid not null unique,
+quantity_picked integer not null default 0 check (quantity_picked >= 0),
+status public.picking_status not null default 'PENDING'::public.picking_status,
+picked_at timestamptz,
+updated_at timestamptz not null default now(),
+constraint order_item_pickings_pkey primary key (id),
+constraint order_item_pickings_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade,
+constraint order_item_pickings_order_item_id_fkey foreign key (order_item_id) references public.order_items(id) on delete cascade
+);
 
-create index if not exists products_user_id_idx
-on public.products(user_id);
+-- ORDER VERIFICATIONS
+create table public.order_verifications (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+order_id uuid not null,
+attempt_number integer not null check (attempt_number > 0),
+photo_url text,
+result public.verification_result not null,
+verified_by uuid not null,
+created_at timestamptz not null default now(),
+constraint order_verifications_pkey primary key (id),
+constraint order_verifications_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade,
+constraint order_verifications_order_id_fkey foreign key (order_id) references public.orders(id) on delete cascade,
+constraint order_verifications_verified_by_fkey foreign key (verified_by) references public.profiles(id) on delete restrict,
+constraint order_verifications_order_attempt_key unique (order_id, attempt_number)
+);
 
+-- ORDER VERIFICATION ITEMS
+create table public.order_verification_items (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+verification_id uuid not null,
+order_item_id uuid not null,
+reason public.verification_reason not null,
+note text,
+constraint order_verification_items_pkey primary key (id),
+constraint order_verification_items_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade,
+constraint order_verification_items_verification_id_fkey foreign key (verification_id) references public.order_verifications(id) on delete cascade,
+constraint order_verification_items_order_item_id_fkey foreign key (order_item_id) references public.order_items(id) on delete cascade
+);
 
-create index if not exists products_category_id_idx
-on public.products(category_id);
+-- ORDER EVENTS
+create table public.order_events (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+order_id uuid not null,
+event_type text not null,
+actor_id uuid,
+metadata jsonb not null default '{}'::jsonb,
+created_at timestamptz not null default now(),
+constraint order_events_pkey primary key (id),
+constraint order_events_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade,
+constraint order_events_order_id_fkey foreign key (order_id) references public.orders(id) on delete cascade,
+constraint order_events_actor_id_fkey foreign key (actor_id) references public.profiles(id) on delete set null
+);
 
+-- NOTIFICATIONS
+create table public.notifications (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+order_id uuid,
+type text not null,
+title text not null,
+body text not null,
+is_read boolean not null default false,
+read_at timestamptz,
+created_at timestamptz not null default now(),
+constraint notifications_pkey primary key (id),
+constraint notifications_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade,
+constraint notifications_order_id_fkey foreign key (order_id) references public.orders(id) on delete cascade
+);
 
-create index if not exists products_unit_id_idx
-on public.products(unit_id);
+-- USER DEVICES
+create table public.user_devices (
+id uuid not null default gen_random_uuid(),
+user_id uuid not null,
+fcm_token text not null unique,
+platform text not null,
+last_seen_at timestamptz,
+created_at timestamptz not null default now(),
+constraint user_devices_pkey primary key (id),
+constraint user_devices_user_id_fkey foreign key (user_id) references public.profiles(id) on delete cascade
+);
 
+---
 
-create index if not exists products_active_idx
-on public.products(user_id, is_active);
+-- 2. INDEXES CREATION
 
+---
 
-create index if not exists products_name_idx
-on public.products(user_id, name);
+create index profiles_owner_id_idx on public.profiles(owner_id) where owner_id is not null;
+create index categories_user_id_idx on public.categories(user_id);
+create index products_user_id_idx on public.products(user_id);
+create index products_category_id_idx on public.products(category_id);
+create index stock_transactions_user_id_idx on public.stock_transactions(user_id);
+create index stock_transactions_product_id_idx on public.stock_transactions(product_id);
+create index stock_opnames_user_id_idx on public.stock_opnames(user_id);
+create index product_logs_user_id_idx on public.product_logs(user_id);
+create index store_settings_user_id_idx on public.store_settings(user_id);
 
+create index orders_user_id_idx on public.orders(user_id);
+create index orders_user_status_idx on public.orders(user_id, status);
+create index orders_queue_idx on public.orders(user_id, queue_position);
+create index orders_created_at_idx on public.orders(user_id, created_at);
 
-create index if not exists stock_transactions_user_id_idx
-on public.stock_transactions(user_id);
+create index order_items_user_id_idx on public.order_items(user_id);
+create index order_items_order_id_idx on public.order_items(order_id);
+create index order_items_product_id_idx on public.order_items(product_id);
 
+create index order_item_pickings_user_id_idx on public.order_item_pickings(user_id);
+create index order_item_pickings_status_idx on public.order_item_pickings(status);
 
-create index if not exists stock_transactions_product_id_idx
-on public.stock_transactions(product_id);
+create index order_verifications_user_id_idx on public.order_verifications(user_id);
+create index order_verifications_order_id_idx on public.order_verifications(order_id);
+create index order_verifications_verified_by_idx on public.order_verifications(verified_by);
 
+create index order_verification_items_user_id_idx on public.order_verification_items(user_id);
+create index order_verification_items_verification_id_idx on public.order_verification_items(verification_id);
+create index order_verification_items_order_item_id_idx on public.order_verification_items(order_item_id);
 
-create index if not exists stock_transactions_created_at_idx
-on public.stock_transactions(created_at desc);
+create index order_events_user_id_idx on public.order_events(user_id);
+create index order_events_order_id_idx on public.order_events(order_id, created_at);
+create index order_events_actor_id_idx on public.order_events(actor_id);
+create index order_events_type_idx on public.order_events(event_type);
 
+create index notifications_user_id_idx on public.notifications(user_id, created_at desc);
+create index notifications_order_id_idx on public.notifications(order_id);
+create index notifications_unread_idx on public.notifications(user_id, is_read);
 
-create index if not exists stock_opnames_user_id_idx
-on public.stock_opnames(user_id);
+create index user_devices_user_id_idx on public.user_devices(user_id);
+create index user_devices_user_platform_idx on public.user_devices(user_id, platform);
 
+---
 
-create index if not exists stock_opnames_product_id_idx
-on public.stock_opnames(product_id);
+-- 3. FUNCTIONS & TRIGGERS
 
+---
 
-create index if not exists product_logs_user_id_idx
-on public.product_logs(user_id);
-
-
-create index if not exists product_logs_product_id_idx
-on public.product_logs(product_id);
-
-
-create index if not exists product_logs_created_at_idx
-on public.product_logs(created_at desc);
-
-
--- ============================================================
--- UPDATED_AT TRIGGER
--- ============================================================
-
+-- Helper function for updated_at column
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
 as $$
 begin
-    new.updated_at = now();
-    return new;
+new.updated_at = now();
+return new;
 end;
-$$;
 
+$$
+;
 
-drop trigger if exists profiles_set_updated_at
-on public.profiles;
+-- Triggers for updated_at
+create trigger profiles_set_updated_at before update on public.profiles for each row execute function public.set_updated_at();
+create trigger categories_set_updated_at before update on public.categories for each row execute function public.set_updated_at();
+create trigger products_set_updated_at before update on public.products for each row execute function public.set_updated_at();
+create trigger store_settings_set_updated_at before update on public.store_settings for each row execute function public.set_updated_at();
+create trigger orders_set_updated_at before update on public.orders for each row execute function public.set_updated_at();
+create trigger order_items_set_updated_at before update on public.order_items for each row execute function public.set_updated_at();
+create trigger order_item_pickings_set_updated_at before update on public.order_item_pickings for each row execute function public.set_updated_at();
 
-create trigger profiles_set_updated_at
-before update on public.profiles
-for each row
-execute function public.set_updated_at();
-
-
-drop trigger if exists categories_set_updated_at
-on public.categories;
-
-create trigger categories_set_updated_at
-before update on public.categories
-for each row
-execute function public.set_updated_at();
-
-
-drop trigger if exists products_set_updated_at
-on public.products;
-
-create trigger products_set_updated_at
-before update on public.products
-for each row
-execute function public.set_updated_at();
-
-
--- ============================================================
--- AUTO CREATE PROFILE AFTER AUTH USER CREATED
--- ============================================================
-
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
+-- Workspace Helper Functions
+create or replace function public.current_workspace_owner_id()
+returns uuid
+language sql
+stable
 security definer
-set search_path = public
-as $$
-begin
-    insert into public.profiles (
-        id,
-        name
-    )
-    values (
-        new.id,
-        coalesce(new.raw_user_meta_data ->> 'name', '')
-    );
+set search_path = ''
+as
+$$
 
-    return new;
-end;
-$$;
+select case
+when p.role = 'OWNER' then p.id
+when p.role = 'OPERATOR' then p.owner_id
+else null
+end
+from public.profiles p
+where p.id = (select auth.uid())
+limit 1;
 
+$$
+;
 
-drop trigger if exists on_auth_user_created
-on auth.users;
-
-create trigger on_auth_user_created
-after insert on auth.users
-for each row
-execute function public.handle_new_user();
-
-
--- ============================================================
--- PRODUCT AUDIT LOG TRIGGER
--- Note otomatis untuk UPDATE:
---   '<pic> mengubah nama_produk, kategori, ...'
--- ============================================================
-
-create or replace function public.handle_product_audit_log()
-returns trigger
-language plpgsql
+create or replace function public.is_workspace_owner()
+returns boolean
+language sql
+stable
 security definer
-set search_path = public
-as $$
-declare
-    v_action text;
-    v_pic text;
-    v_note text;
-    v_target_user_id uuid;
-    v_changes text[] := '{}';
-begin
-    if (TG_OP = 'DELETE') then
-        v_target_user_id := OLD.user_id;
-    else
-        v_target_user_id := NEW.user_id;
-    end if;
+set search_path = ''
+as
+$$
 
-    -- Ambil nama pengguna (PIC) dari tabel profiles
-    select name into v_pic
-    from public.profiles
-    where id = v_target_user_id;
+select exists (
+select 1
+from public.profiles p
+where p.id = (select auth.uid())
+and p.role = 'OWNER'
+and p.owner_id is null
+);
 
-    if v_pic is null or length(trim(v_pic)) = 0 then
-        v_pic := 'User';
-    end if;
+$$
+;
 
-    if (TG_OP = 'INSERT') then
-        insert into public.product_logs (
-            user_id, product_id, product_name, action,
-            pic, note, old_data, new_data
-        ) values (
-            NEW.user_id, NEW.id, NEW.name, 'CREATE',
-            v_pic, null, null, to_jsonb(NEW)
-        );
-        return NEW;
+create or replace function public.is_workspace_member(p_owner_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as
+$$
 
-    elsif (TG_OP = 'UPDATE') then
-        -- Deteksi otomatis jenis perubahan stok vs editan data produk
-        if (OLD.current_stock < NEW.current_stock and OLD.name = NEW.name and OLD.purchase_price = NEW.purchase_price) then
-            v_action := 'STOCK_IN';
-        elsif (OLD.current_stock > NEW.current_stock and OLD.name = NEW.name and OLD.purchase_price = NEW.purchase_price) then
-            v_action := 'STOCK_OUT';
-        else
-            v_action := 'UPDATE';
-        end if;
+select p_owner_id is not null
+and p_owner_id = public.current_workspace_owner_id();
 
-        if (v_action in ('STOCK_IN', 'STOCK_OUT')) then
-            -- Catatan diambil dari transaksi stok terakhir
-            select note into v_note
-            from public.stock_transactions
-            where product_id = NEW.id
-              and user_id = NEW.user_id
-            order by created_at desc
-            limit 1;
-        else
-            -- Kumpulkan kolom yang berubah
-            if OLD.name is distinct from NEW.name then
-                v_changes := array_append(v_changes, 'nama_produk');
-            end if;
-            if OLD.category_id is distinct from NEW.category_id then
-                v_changes := array_append(v_changes, 'kategori');
-            end if;
-            if OLD.sku is distinct from NEW.sku then
-                v_changes := array_append(v_changes, 'sku');
-            end if;
-            if OLD.purchase_price is distinct from NEW.purchase_price then
-                v_changes := array_append(v_changes, 'purchase_price');
-            end if;
-            if OLD.recommended_selling_price is distinct from NEW.recommended_selling_price then
-                v_changes := array_append(v_changes, 'recommended_selling_price');
-            end if;
-            if OLD.unit_id is distinct from NEW.unit_id then
-                v_changes := array_append(v_changes, 'unit');
-            end if;
-            if OLD.minimum_stock is distinct from NEW.minimum_stock then
-                v_changes := array_append(v_changes, 'minimum_stock');
-            end if;
+$$
+;
 
-            if cardinality(v_changes) > 0 then
-                v_note := v_pic || ' mengubah ' || array_to_string(v_changes, ', ');
-            else
-                v_note := null;
-            end if;
-        end if;
-
-        insert into public.product_logs (
-            user_id, product_id, product_name, action,
-            pic, note, old_data, new_data
-        ) values (
-            NEW.user_id, NEW.id, NEW.name, v_action,
-            v_pic, v_note, to_jsonb(OLD), to_jsonb(NEW)
-        );
-        return NEW;
-
-    elsif (TG_OP = 'DELETE') then
-        insert into public.product_logs (
-            user_id, product_id, product_name, action,
-            pic, note, old_data, new_data
-        ) values (
-            OLD.user_id, OLD.id, OLD.name, 'DELETE',
-            v_pic, null, to_jsonb(OLD), null
-        );
-        return OLD;
-    end if;
-
-    return null;
-end;
-$$;
+-- Permissions for helper functions
+revoke all on function public.current_workspace_owner_id() from public;
+revoke all on function public.is_workspace_owner() from public;
+revoke all on function public.is_workspace_member(uuid) from public;
+grant execute on function public.current_workspace_owner_id() to authenticated;
+grant execute on function public.is_workspace_owner() to authenticated;
+grant execute on function public.is_workspace_member(uuid) to authenticated;
 
 
-drop trigger if exists on_product_change_audit_log
-on public.products;
+-- ------------------------------------------------------------
+-- 4. ROW LEVEL SECURITY (RLS) & POLICIES
+-- ------------------------------------------------------------
 
-create trigger on_product_change_audit_log
-after insert or update or delete on public.products
-for each row
-execute function public.handle_product_audit_log();
-
-
--- ============================================================
--- ROW LEVEL SECURITY
--- ============================================================
-
+-- Enable RLS on all tables
 alter table public.profiles enable row level security;
+alter table public.units enable row level security;
 alter table public.categories enable row level security;
 alter table public.products enable row level security;
 alter table public.stock_transactions enable row level security;
 alter table public.stock_opnames enable row level security;
 alter table public.product_logs enable row level security;
-
-
--- ============================================================
--- PROFILES POLICIES
--- ============================================================
-
-drop policy if exists "Users can view own profile"
-on public.profiles;
-
-create policy "Users can view own profile"
-on public.profiles
-for select
-using (
-    auth.uid() = id
-);
-
-
-drop policy if exists "Users can update own profile"
-on public.profiles;
-
-create policy "Users can update own profile"
-on public.profiles
-for update
-using (
-    auth.uid() = id
-)
-with check (
-    auth.uid() = id
-);
-
-
--- ============================================================
--- CATEGORY POLICIES
--- ============================================================
-
-drop policy if exists "Users can view own categories"
-on public.categories;
-
-create policy "Users can view own categories"
-on public.categories
-for select
-using (
-    auth.uid() = user_id
-);
-
-
-drop policy if exists "Users can insert own categories"
-on public.categories;
-
-create policy "Users can insert own categories"
-on public.categories
-for insert
-with check (
-    auth.uid() = user_id
-);
-
-
-drop policy if exists "Users can update own categories"
-on public.categories;
-
-create policy "Users can update own categories"
-on public.categories
-for update
-using (
-    auth.uid() = user_id
-)
-with check (
-    auth.uid() = user_id
-);
-
-
-drop policy if exists "Users can delete own categories"
-on public.categories;
-
-create policy "Users can delete own categories"
-on public.categories
-for delete
-using (
-    auth.uid() = user_id
-);
-
-
--- ============================================================
--- PRODUCT POLICIES
--- ============================================================
-
-drop policy if exists "Users can view own products"
-on public.products;
-
-create policy "Users can view own products"
-on public.products
-for select
-to authenticated
-using (
-    auth.uid() = user_id
-);
-
-
-drop policy if exists "Users can insert own products"
-on public.products;
-
-create policy "Users can insert own products"
-on public.products
-for insert
-to authenticated
-with check (
-    auth.uid() = user_id
-);
-
-
-drop policy if exists "Users can update own products"
-on public.products;
-
-create policy "Users can update own products"
-on public.products
-for update
-to authenticated
-using (
-    auth.uid() = user_id
-)
-with check (
-    auth.uid() = user_id
-);
-
-
-drop policy if exists "Users can delete own products"
-on public.products;
-
-create policy "Users can delete own products"
-on public.products
-for delete
-to authenticated
-using (
-    auth.uid() = user_id
-);
-
-
--- ============================================================
--- TRANSACTION POLICIES
--- ============================================================
-
-drop policy if exists "Users can view own stock transactions"
-on public.stock_transactions;
-
-create policy "Users can view own stock transactions"
-on public.stock_transactions
-for select
-using (
-    auth.uid() = user_id
-);
-
-
--- IMPORTANT:
--- Direct INSERT/UPDATE/DELETE from client should NOT be used
--- for stock transactions.
--- Stock mutations are handled through RPC functions below.
-
-
--- ============================================================
--- OPNAME POLICIES
--- ============================================================
-
-drop policy if exists "Users can view own stock opnames"
-on public.stock_opnames;
-
-create policy "Users can view own stock opnames"
-on public.stock_opnames
-for select
-using (
-    auth.uid() = user_id
-);
-
-
--- ============================================================
--- PRODUCT LOGS POLICIES
--- ============================================================
-
-drop policy if exists "Users can view own product logs"
-on public.product_logs;
-
-create policy "Users can view own product logs"
-on public.product_logs
-for select
-to authenticated
-using (
-    auth.uid() = user_id
-);
-
-
--- ============================================================
--- STOCK IN RPC
--- ============================================================
-
-create or replace function public.stock_in(
-    p_product_id uuid,
-    p_quantity integer,
-    p_purchase_price numeric,
-    p_note text default null
-)
-returns public.stock_transactions
-language plpgsql
-security invoker
-set search_path = public
-as $$
-declare
-    v_user_id uuid;
-    v_product public.products;
-    v_transaction public.stock_transactions;
-begin
-
-    v_user_id := auth.uid();
-
-    if v_user_id is null then
-        raise exception 'Authentication required';
-    end if;
-
-    if p_quantity <= 0 then
-        raise exception 'Quantity must be greater than zero';
-    end if;
-
-    if p_purchase_price < 0 then
-        raise exception 'Purchase price cannot be negative';
-    end if;
-
-    select *
-    into v_product
-    from public.products
-    where id = p_product_id
-      and user_id = v_user_id
-      and is_active = true
-    for update;
-
-    if not found then
-        raise exception 'Product not found or inactive';
-    end if;
-
-    insert into public.stock_transactions (
-        user_id,
-        product_id,
-        type,
-        quantity,
-        adjustment,
-        purchase_price,
-        reason,
-        note,
-        stock_before,
-        stock_after
-    )
-    values (
-        v_user_id,
-        p_product_id,
-        'IN',
-        p_quantity,
-        p_quantity,
-        p_purchase_price,
-        'Stock In',
-        p_note,
-        v_product.current_stock,
-        v_product.current_stock + p_quantity
-    )
-    returning *
-    into v_transaction;
-
-    update public.products
-    set
-        current_stock = current_stock + p_quantity,
-        purchase_price = p_purchase_price,
-        updated_at = now()
-    where id = p_product_id
-      and user_id = v_user_id;
-
-    return v_transaction;
-end;
-$$;
-
-
--- ============================================================
--- STOCK OUT RPC
--- ============================================================
-
-create or replace function public.stock_out(
-    p_product_id uuid,
-    p_quantity integer,
-    p_reason text,
-    p_note text default null
-)
-returns public.stock_transactions
-language plpgsql
-security invoker
-set search_path = public
-as $$
-declare
-    v_user_id uuid;
-    v_product public.products;
-    v_transaction public.stock_transactions;
-begin
-
-    v_user_id := auth.uid();
-
-    if v_user_id is null then
-        raise exception 'Authentication required';
-    end if;
-
-    if p_quantity <= 0 then
-        raise exception 'Quantity must be greater than zero';
-    end if;
-
-    select *
-    into v_product
-    from public.products
-    where id = p_product_id
-      and user_id = v_user_id
-      and is_active = true
-    for update;
-
-    if not found then
-        raise exception 'Product not found or inactive';
-    end if;
-
-    if v_product.current_stock < p_quantity then
-        raise exception
-            'Insufficient stock. Available: %, requested: %',
-            v_product.current_stock,
-            p_quantity;
-    end if;
-
-    insert into public.stock_transactions (
-        user_id,
-        product_id,
-        type,
-        quantity,
-        adjustment,
-        purchase_price,
-        reason,
-        note,
-        stock_before,
-        stock_after
-    )
-    values (
-        v_user_id,
-        p_product_id,
-        'OUT',
-        p_quantity,
-        -p_quantity,
-        v_product.purchase_price,
-        p_reason,
-        p_note,
-        v_product.current_stock,
-        v_product.current_stock - p_quantity
-    )
-    returning *
-    into v_transaction;
-
-    update public.products
-    set
-        current_stock = current_stock - p_quantity,
-        updated_at = now()
-    where id = p_product_id
-      and user_id = v_user_id;
-
-    return v_transaction;
-end;
-$$;
-
-
--- ============================================================
--- STOCK OPNAME RPC
--- ============================================================
-
-create or replace function public.stock_opname(
-    p_product_id uuid,
-    p_physical_stock integer,
-    p_note text default null
-)
-returns public.stock_opnames
-language plpgsql
-security invoker
-set search_path = public
-as $$
-declare
-    v_user_id uuid;
-    v_product public.products;
-    v_difference integer;
-    v_transaction public.stock_transactions;
-    v_opname public.stock_opnames;
-begin
-
-    v_user_id := auth.uid();
-
-    if v_user_id is null then
-        raise exception 'Authentication required';
-    end if;
-
-    if p_physical_stock < 0 then
-        raise exception 'Physical stock cannot be negative';
-    end if;
-
-    select *
-    into v_product
-    from public.products
-    where id = p_product_id
-      and user_id = v_user_id
-      and is_active = true
-    for update;
-
-    if not found then
-        raise exception 'Product not found or inactive';
-    end if;
-
-    v_difference :=
-        p_physical_stock - v_product.current_stock;
-
-    -- Create stock transaction only when there is a difference.
-    if v_difference <> 0 then
-
-        insert into public.stock_transactions (
-            user_id,
-            product_id,
-            type,
-            quantity,
-            adjustment,
-            purchase_price,
-            reason,
-            note,
-            stock_before,
-            stock_after
-        )
-        values (
-            v_user_id,
-            p_product_id,
-            'OPNAME',
-            abs(v_difference),
-            v_difference,
-            v_product.purchase_price,
-            'Stock Opname',
-            p_note,
-            v_product.current_stock,
-            p_physical_stock
-        )
-        returning *
-        into v_transaction;
-
-        update public.products
-        set
-            current_stock = p_physical_stock,
-            updated_at = now()
-        where id = p_product_id
-          and user_id = v_user_id;
-
-    else
-
-        -- No stock adjustment (quantity = 0 diizinkan khusus OPNAME).
-        insert into public.stock_transactions (
-            user_id,
-            product_id,
-            type,
-            quantity,
-            adjustment,
-            purchase_price,
-            reason,
-            note,
-            stock_before,
-            stock_after
-        )
-        values (
-            v_user_id,
-            p_product_id,
-            'OPNAME',
-            0,
-            0,
-            v_product.purchase_price,
-            'Stock Opname',
-            p_note,
-            v_product.current_stock,
-            p_physical_stock
-        )
-        returning *
-        into v_transaction;
-
-    end if;
-
-    insert into public.stock_opnames (
-        user_id,
-        product_id,
-        transaction_id,
-        system_stock,
-        physical_stock,
-        difference,
-        note
-    )
-    values (
-        v_user_id,
-        p_product_id,
-        v_transaction.id,
-        v_product.current_stock,
-        p_physical_stock,
-        v_difference,
-        p_note
-    )
-    returning *
-    into v_opname;
-
-    return v_opname;
-end;
-$$;
-
-
--- ============================================================
--- TABLE PERMISSIONS
--- ============================================================
-
-grant select, insert, update, delete on all tables in schema public to authenticated;
-grant usage, select on all sequences in schema public to authenticated;
-
-
--- ============================================================
--- RPC PERMISSIONS
--- ============================================================
-
-revoke all
-on function public.stock_in(uuid, integer, numeric, text)
-from public;
-
-grant execute
-on function public.stock_in(uuid, integer, numeric, text)
-to authenticated;
-
-
-revoke all
-on function public.stock_out(uuid, integer, text, text)
-from public;
-
-grant execute
-on function public.stock_out(uuid, integer, text, text)
-to authenticated;
-
-
-revoke all
-on function public.stock_opname(uuid, integer, text)
-from public;
-
-grant execute
-on function public.stock_opname(uuid, integer, text)
-to authenticated;
-
-
--- ============================================================
--- REALTIME
--- ============================================================
-
--- Add tables to Supabase Realtime publication.
--- If a table is already included, PostgreSQL may report that
--- it is already a member of the publication.
-
-do $$
-begin
-    alter publication supabase_realtime
-        add table public.products;
-exception
-    when duplicate_object then null;
-end $$;
-
-
-do $$
-begin
-    alter publication supabase_realtime
-        add table public.stock_transactions;
-exception
-    when duplicate_object then null;
-end $$;
-
-
--- ============================================================
--- HELPFUL VIEW: LOW STOCK
--- ============================================================
-
-create or replace view public.low_stock_products
-with (security_invoker = true)
-as
-select
-    p.id,
-    p.user_id,
-    p.category_id,
-    p.name,
-    p.sku,
-    p.purchase_price,
-    p.recommended_selling_price,
-    p.minimum_stock,
-    p.current_stock,
-    p.is_active,
-    p.created_at,
-    p.updated_at
-from public.products p
-where
-    p.is_active = true
-    and p.current_stock <= p.minimum_stock;
-
-
--- ============================================================
--- HELPFUL VIEW: INVENTORY SUMMARY
--- ============================================================
-
-create or replace view public.inventory_summary
-with (security_invoker = true)
-as
-select
-    p.user_id,
-
-    count(*)::integer as total_products,
-
-    coalesce(
-        sum(p.current_stock),
-        0
-    )::bigint as total_items,
-
-    coalesce(
-        sum(
-            p.current_stock * p.purchase_price
-        ),
-        0
-    )::numeric(15,2) as inventory_value
-
-from public.products p
-
-where p.is_active = true
-
-group by p.user_id;
-
-
--- ============================================================
--- STORE SETTINGS
--- ============================================================
-
-create table if not exists public.store_settings (
-    id uuid primary key default gen_random_uuid(),
-    user_id uuid references auth.users(id) on delete cascade,
-    store_name text not null default 'Warung Saya',
-    address text,
-    phone_number text,
-    header_footer_note text,
-    created_at timestamptz not null default now(),
-    updated_at timestamptz not null default now()
-);
-
 alter table public.store_settings enable row level security;
+alter table public.orders enable row level security;
+alter table public.order_items enable row level security;
+alter table public.order_item_pickings enable row level security;
+alter table public.order_verifications enable row level security;
+alter table public.order_verification_items enable row level security;
+alter table public.order_events enable row level security;
+alter table public.notifications enable row level security;
+alter table public.user_devices enable row level security;
 
-drop policy if exists "Allow all access to store_settings"
-on public.store_settings;
+-- PROFILES
+create policy profiles_select_workspace on public.profiles for select to authenticated
+using (id = (select auth.uid()) or owner_id = (select auth.uid()));
 
-create policy "Allow all access to store_settings"
-    on public.store_settings for all
-    using (true);
+revoke update on public.profiles from authenticated;
+grant update (name) on public.profiles to authenticated;
 
-/// Jika database sudah berjalan, jangan jalankan ulang schema ini sebagai pengganti migration. create table if not exists tidak mengubah table yang sudah ada, jadi constraint lama tetap aktif. Jalankan ini sekali di SQL Editor:
+create policy profiles_update_own_name on public.profiles for update to authenticated
+using (id = (select auth.uid())) with check (id = (select auth.uid()));
 
-alter table public.stock_transactions
-    drop constraint if exists stock_transaction_quantity_positive;
+-- UNITS (Global readable catalog)
+create policy units_select_all on public.units for select to authenticated using (true);
 
-alter table public.stock_transactions
-    drop constraint if exists stock_transaction_quantity_valid;
+-- CATEGORIES
+create policy categories_select_workspace on public.categories for select to authenticated using (public.is_workspace_member(user_id));
+create policy categories_owner_insert on public.categories for insert to authenticated with check (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+create policy categories_owner_update on public.categories for update to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner()) with check (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+create policy categories_owner_delete on public.categories for delete to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
 
-alter table public.stock_transactions
-    add constraint stock_transaction_quantity_valid
-    check (
-        (type = 'OPNAME' and quantity >= 0)
-        or (type <> 'OPNAME' and quantity > 0)
-    );
+-- PRODUCTS
+create policy products_select_workspace on public.products for select to authenticated using (public.is_workspace_member(user_id));
+create policy products_owner_insert on public.products for insert to authenticated with check (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+create policy products_owner_update on public.products for update to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner()) with check (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+create policy products_owner_delete on public.products for delete to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+
+-- STOCK TRANSACTIONS (Owner-only ledger)
+create policy stock_transactions_owner_select on public.stock_transactions for select to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+
+-- STOCK OPNAMES (Owner-only)
+create policy stock_opnames_owner_select on public.stock_opnames for select to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+
+-- PRODUCT LOGS (Owner-only)
+create policy product_logs_owner_select on public.product_logs for select to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+
+-- STORE SETTINGS
+create policy store_settings_owner_select on public.store_settings for select to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+create policy store_settings_owner_insert on public.store_settings for insert to authenticated with check (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+create policy store_settings_owner_update on public.store_settings for update to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner()) with check (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+create policy store_settings_owner_delete on public.store_settings for delete to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+
+-- ORDERS
+create policy orders_select_workspace on public.orders for select to authenticated using (public.is_workspace_member(user_id));
+create policy orders_owner_insert on public.orders for insert to authenticated with check (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+create policy orders_owner_update on public.orders for update to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner()) with check (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+create policy orders_owner_delete on public.orders for delete to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+
+-- ORDER ITEMS
+create policy order_items_select_workspace on public.order_items for select to authenticated using (public.is_workspace_member(user_id));
+create policy order_items_owner_insert on public.order_items for insert to authenticated with check (
+  user_id = public.current_workspace_owner_id()
+  and public.is_workspace_owner()
+  and exists (select 1 from public.orders o where o.id = order_id and o.user_id = public.current_workspace_owner_id())
+  and exists (select 1 from public.products p where p.id = product_id and p.user_id = public.current_workspace_owner_id())
+);
+create policy order_items_owner_update on public.order_items for update to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner()) with check (
+  user_id = public.current_workspace_owner_id()
+  and public.is_workspace_owner()
+  and exists (select 1 from public.orders o where o.id = order_id and o.user_id = public.current_workspace_owner_id())
+  and exists (select 1 from public.products p where p.id = product_id and p.user_id = public.current_workspace_owner_id())
+);
+create policy order_items_owner_delete on public.order_items for delete to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+
+-- ORDER ITEM PICKINGS
+create policy pickings_select_workspace on public.order_item_pickings for select to authenticated using (public.is_workspace_member(user_id));
+create policy pickings_operator_or_owner_update on public.order_item_pickings for update to authenticated using (public.is_workspace_member(user_id)) with check (public.is_workspace_member(user_id));
+create policy pickings_owner_insert on public.order_item_pickings for insert to authenticated with check (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+create policy pickings_owner_delete on public.order_item_pickings for delete to authenticated using (user_id = public.current_workspace_owner_id() and public.is_workspace_owner());
+
+-- ORDER VERIFICATIONS
+create policy verifications_select_workspace on public.order_verifications for select to authenticated using (public.is_workspace_member(user_id));
+create policy verifications_owner_insert on public.order_verifications for insert to authenticated with check (
+  user_id = public.current_workspace_owner_id()
+  and public.is_workspace_owner()
+  and verified_by = (select auth.uid())
+  and exists (select 1 from public.orders o where o.id = order_id and o.user_id = public.current_workspace_owner_id())
+);
+
+-- ORDER VERIFICATION ITEMS
+create policy verification_items_select_workspace on public.order_verification_items for select to authenticated using (public.is_workspace_member(user_id));
+create policy verification_items_owner_insert on public.order_verification_items for insert to authenticated with check (
+  user_id = public.current_workspace_owner_id()
+  and public.is_workspace_owner()
+  and exists (select 1 from public.order_verifications ov where ov.id = verification_id and ov.user_id = public.current_workspace_owner_id())
+  and exists (select 1 from public.order_items oi where oi.id = order_item_id and oi.user_id = public.current_workspace_owner_id())
+);
+
+-- ORDER EVENTS
+create policy order_events_select_workspace on public.order_events for select to authenticated using (public.is_workspace_member(user_id));
+create policy order_events_insert_workspace on public.order_events for insert to authenticated with check (
+  user_id = public.current_workspace_owner_id()
+  and public.is_workspace_member(user_id)
+  and (actor_id is null or actor_id = (select auth.uid()))
+  and exists (select 1 from public.orders o where o.id = order_id and o.user_id = public.current_workspace_owner_id())
+);
+
+-- NOTIFICATIONS
+create policy notifications_select_own on public.notifications for select to authenticated using (user_id = (select auth.uid()));
+create policy notifications_update_own on public.notifications for update to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+create policy notifications_insert_own on public.notifications for insert to authenticated with check (
+  user_id = (select auth.uid())
+  and (
+    order_id is null
+    or exists (select 1 from public.orders o where o.id = order_id and public.is_workspace_member(o.user_id))
+  )
+);
+
+-- USER DEVICES
+create policy user_devices_select_own on public.user_devices for select to authenticated using (user_id = (select auth.uid()));
+create policy user_devices_manage_own on public.user_devices for all to authenticated using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
+
+commit;
+$$
