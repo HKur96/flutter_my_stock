@@ -3,9 +3,12 @@ import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/theme/app_theme.dart';
+import 'package:flutter_catat_stok/core/utils/smooth_page_route.dart';
 import 'package:flutter_catat_stok/core/widgets/app_shimmer.dart';
+import 'package:flutter_catat_stok/core/widgets/empty_state_widget.dart';
 import 'package:flutter_catat_stok/module/product/domain/models/product.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
+import 'package:flutter_catat_stok/module/product/presentation/screens/add_edit_product_screen.dart';
 import 'package:provider/provider.dart';
 
 class ProductSearchDelegate extends SearchDelegate<Product?> {
@@ -190,12 +193,22 @@ class _ProductSearchListState extends State<_ProductSearchList> {
 
     // Kosong
     if (products.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Text(
-            'Produk tidak ditemukan',
-            style: TextStyle(color: AppColors.textMuted, fontSize: 14),
+      return Center(
+        child: RefreshIndicator(
+          onRefresh: () async => _fetchFirstPage(),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: EmptyStateWidget(
+              imagePath: 'assets/images/empty_product.png',
+              title: 'Produk tidak ditemukan',
+              subtitle: 'Coba ubah kata kunci pencarian atau filter kategori.',
+              actionLabel: 'Tambah Produk',
+              onAction: () => Navigator.push(
+                context,
+                SmoothPageRoute(page: const AddEditProductScreen()),
+              ),
+              icon: Icons.add,
+            ),
           ),
         ),
       );

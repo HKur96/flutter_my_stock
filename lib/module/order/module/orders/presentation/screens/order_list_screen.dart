@@ -11,7 +11,7 @@ import 'package:flutter_catat_stok/core/widgets/empty_state_widget.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
 import 'package:flutter_catat_stok/module/order/domain/models/order_enums.dart';
 import 'package:flutter_catat_stok/module/order/module/orders/presentation/provider/orders_provider.dart';
-import 'package:flutter_catat_stok/module/order/presentation/screens/create_order_screen.dart';
+import 'package:flutter_catat_stok/module/order/module/orders/presentation/screens/create_order_screen.dart';
 import 'package:flutter_catat_stok/module/order/presentation/widgets/order_card.dart';
 import 'package:provider/provider.dart';
 
