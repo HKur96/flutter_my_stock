@@ -6,6 +6,8 @@ import 'package:flutter_catat_stok/module/auth/data/repository/auth_repository_i
 import 'package:flutter_catat_stok/module/auth/domain/repository/auth_repository.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/screens/splash_screen.dart';
+import 'package:flutter_catat_stok/module/order/module/orders/presentation/provider/orders_provider.dart';
+import 'package:flutter_catat_stok/module/order/order_module.dart';
 import 'package:flutter_catat_stok/module/product/data/repository/product_repository_impl.dart';
 import 'package:flutter_catat_stok/module/product/domain/repository/product_repository.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
@@ -45,6 +47,7 @@ void main() async {
   final StoreSettingsRepository storeSettingsRepository =
       StoreSettingsRepositoryImpl();
   final UnitRepository unitRepository = UnitRepositoryImpl();
+  final OrderRepository orderRepository = OrderRepositoryImpl();
 
   runApp(
     MultiProvider(
@@ -53,15 +56,12 @@ void main() async {
         ChangeNotifierProvider(
           create: (_) => ProductProvider(productRepository),
         ),
-        ChangeNotifierProvider(
-          create: (_) => StockProvider(stockRepository),
-        ),
+        ChangeNotifierProvider(create: (_) => StockProvider(stockRepository)),
         ChangeNotifierProvider(
           create: (_) => StoreSettingsProvider(storeSettingsRepository),
         ),
-        ChangeNotifierProvider(
-          create: (_) => UnitProvider(unitRepository),
-        ),
+        ChangeNotifierProvider(create: (_) => UnitProvider(unitRepository)),
+        ChangeNotifierProvider(create: (_) => OrdersProvider(orderRepository)),
       ],
       child: const StokSayaApp(),
     ),

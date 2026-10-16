@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/enum.dart';
+import 'package:flutter_catat_stok/module/order/module/orders/presentation/screens/order_list_screen.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
 import 'package:flutter_catat_stok/module/product/presentation/screens/manage_category_screen.dart';
 import 'package:provider/provider.dart';
@@ -94,18 +95,24 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 ),
                 _buildNavItem(
                   1,
+                  Icons.shopping_cart_rounded,
+                  Icons.shopping_cart_outlined,
+                  'Order',
+                ),
+                _buildNavItem(
+                  2,
                   Icons.inventory_2_rounded,
                   Icons.inventory_2_outlined,
                   'Produk',
                 ),
                 _buildNavItem(
-                  2,
+                  3,
                   Icons.history_rounded,
                   Icons.history_outlined,
                   'Riwayat',
                 ),
                 _buildNavItem(
-                  3,
+                  4,
                   Icons.person_rounded,
                   Icons.person_outline_rounded,
                   'Akun',
@@ -162,10 +169,12 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           onNavigateToTab: (idx) => setState(() => _currentIndex = idx),
         );
       case 1:
-        return const ProductListScreen();
+        return const OrderListScreen();
       case 2:
-        return const HistoryScreen();
+        return const ProductListScreen();
       case 3:
+        return const HistoryScreen();
+      case 4:
         return const ProfileScreen();
       default:
         return const DashboardScreen();

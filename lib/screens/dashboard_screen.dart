@@ -1,6 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_catat_stok/core/config/extensions.dart';
 import 'package:flutter_catat_stok/core/services/local_storage_service.dart';
@@ -9,6 +10,9 @@ import 'package:flutter_catat_stok/core/widgets/app_circle_avatar.dart';
 import 'package:flutter_catat_stok/core/widgets/app_shimmer.dart';
 import 'package:flutter_catat_stok/module/auth/domain/models/user.dart';
 import 'package:flutter_catat_stok/module/auth/presentation/provider/auth_provider.dart';
+import 'package:flutter_catat_stok/module/order/presentation/screens/operator_dashboard_screen.dart';
+import 'package:flutter_catat_stok/module/order/presentation/screens/owner_dashboard_screen.dart';
+import 'package:flutter_catat_stok/module/order/presentation/widgets/mock_order_data.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/product_provider.dart';
 import 'package:flutter_catat_stok/module/product/presentation/provider/unit_provider.dart';
 import 'package:flutter_catat_stok/module/stock/presentation/provider/stock_provider.dart';
@@ -76,6 +80,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _buildHeader(),
                 const SizedBox(height: 16),
 
+                _buildAlertBanner(),
+                const SizedBox(height: 16),
+
                 // Card Estimasi Nilai Stok (Match Stitch 11_beranda)
                 _buildStockValueCard(),
                 const SizedBox(height: 16),
@@ -114,6 +121,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
         AppCircleAvatar(name: user?.name.initials ?? 'U'),
+        if (kDebugMode)
+          IconButton(
+            onPressed: () {
+              if (user == null) return;
+
+              if (user.role == Role.owner) {
+                Navigator.of(
+                  context,
+                ).push(SmoothPageRoute(page: const OwnerDashboardScreen()));
+              } else {
+                Navigator.of(
+                  context,
+                ).push(SmoothPageRoute(page: const OperatorDashboardScreen()));
+              }
+            },
+            icon: const Icon(Icons.logout),
+          ),
       ],
     );
   }
@@ -728,6 +752,88 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
           ],
         );
+      },
+    );
+  }
+
+  Widget _buildAlertBanner() {
+    return Builder(
+      builder: (context) {
+        final summary = MockOrderData.sampleSummary;
+
+        if (summary.waitingVerificationCount > 0 ||
+            summary.rePickingCount > 0) {
+          return Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppColors.warningBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.warningBorder),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.warning_amber_rounded,
+                          color: AppColors.warning,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${summary.waitingVerificationCount} Pesanan Butuh Verifikasi Foto',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.warning,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    const Text(
+                      'Operator telah menyelesaikan picking. Mohon periksa foto barang sebelum proses packing.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    InkWell(
+                      onTap: () {
+                        // TODO:
+                      },
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Buka Antrean Verifikasi',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.warning,
+                            ),
+                          ),
+                          SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward,
+                            size: 14,
+                            color: AppColors.warning,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        return const SizedBox.shrink();
       },
     );
   }
